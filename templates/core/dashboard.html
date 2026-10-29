@@ -10,6 +10,16 @@
     </div>
   </div>
 
+  {# Сквозной поиск — клиенты, сотрудники, услуги; на лету, с группами #}
+  {% if request.user|can:"client.view" or request.user|can:"staff.view" or request.user|can:"service.view" %}
+  <div class="search-wrap" style="margin-bottom:18px;">
+    <svg class="search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+    <input id="gsearch" type="text" autocomplete="off" placeholder="Поиск — клиент, мастер, услуга…"
+           data-url="{% url 'global_search' %}">
+    <div id="gsearch-res" class="search-res" style="display:none;"></div>
+  </div>
+  {% endif %}
+
   {# Главные метрики — сразу в лицо, без фильтров #}
   <div class="grid auto" style="margin-bottom:16px;">
     <div class="tile">
@@ -102,4 +112,47 @@
       </div>
     </div>
   </div>
+
+  {# Живой поиск: debounce + fetch, выпадающий список → карточка клиента #}
+  <script>
+  (function () {
+    var inp = document.getElementById('gsearch');
+    if (!inp) return;
+    var box = document.getElementById('gsearch-res');
+    var url = inp.dataset.url, t = null, last = '';
+
+    function esc(s) { return (s || '').replace(/</g, '&lt;'); }
+    function hide() { box.style.display = 'none'; box.innerHTML = ''; }
+    function render(groups, q) {
+      if (!groups.length) {
+        box.innerHTML = '<div class="search-empty">Ничего не нашлось по «' + esc(q) + '»</div>';
+      } else {
+        box.innerHTML = groups.map(function (g) {
+          var rows = g.items.map(function (r) {
+            return '<a class="search-item" href="' + r.url + '">' +
+                   '<span class="search-name">' + esc(r.name) + '</span>' +
+                   '<span class="search-phone">' + esc(r.sub) + '</span></a>';
+          }).join('');
+          return '<div class="search-group">' + esc(g.label) + '</div>' + rows;
+        }).join('');
+      }
+      box.style.display = 'block';
+    }
+    function run() {
+      var q = inp.value.trim();
+      if (q === last) return; last = q;
+      if (q.length < 2) { hide(); return; }
+      fetch(url + '?q=' + encodeURIComponent(q), {headers: {'X-Requested-With': 'fetch'}})
+        .then(function (r) { return r.json(); })
+        .then(function (d) { render(d.groups || [], q); })
+        .catch(hide);
+    }
+    inp.addEventListener('input', function () { clearTimeout(t); t = setTimeout(run, 180); });
+    inp.addEventListener('focus', function () { if (inp.value.trim().length >= 2) run(); });
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('.search-wrap')) hide();
+    });
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Escape') hide(); });
+  })();
+  </script>
 {% endblock %}

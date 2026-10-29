@@ -1,0 +1,19 @@
+{# Строка ростера: цвет, имя, спец., телефон, график, записей сегодня #}
+<div class="emp-row">
+  <span class="emp-dot" style="background:{{ r.e.color|default:'#0071E3' }};"></span>
+  <div class="emp-id">
+    <div class="title">{{ r.e.full_name }}</div>
+    <div class="sub">{{ r.e.specialization|default:"—" }}{% if r.e.phone %} · {{ r.e.phone }}{% endif %}</div>
+  </div>
+  <div class="emp-days">
+    {% if r.days %}{% for d in r.days %}<span class="day-chip">{{ d }}</span>{% endfor %}
+    {% else %}<span class="muted" style="font-size:12px;">график не задан</span>{% endif %}
+  </div>
+  <div class="emp-meta">
+    {% if shift %}
+      <span class="tag" style="color:var(--status-came);">сегодня {{ r.count }}</span>
+    {% else %}
+      <span class="muted" style="font-size:13px;">—</span>
+    {% endif %}
+  </div>
+</div>

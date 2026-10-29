@@ -32,6 +32,12 @@ class Command(BaseCommand):
                 "is_active": True,
             },
         )
+        # Включаем модуль «Финансы» демо-тенанту (чтобы пункт был виден)
+        mods = set(tenant.enabled_modules or [])
+        if "finance" not in mods:
+            mods.add("finance")
+            tenant.enabled_modules = sorted(mods)
+            tenant.save(update_fields=["enabled_modules"])
         self.stdout.write(("Создан" if created else "Уже есть") + f" тенант: {tenant.name}")
 
         # --- Роли из пресетов ---
@@ -74,16 +80,18 @@ class Command(BaseCommand):
 
     def _seed_business(self, tenant):
         # Мастера — колонки журнала
+        # work_days: 0=Пн … 6=Вс. Пусто = каждый день.
         masters = [
-            ("Мария", "Стилист-парикмахер", "#B5651D", 10),
-            ("Ольга", "Мастер маникюра", "#6A5ACD", 20),
-            ("Иван", "Массажист", "#1C8C4A", 30),
+            ("Мария", "Стилист-парикмахер", "#B5651D", 10, [0, 1, 2, 3, 4]),   # будни
+            ("Ольга", "Мастер маникюра", "#6A5ACD", 20, [2, 3, 4, 5, 6]),      # ср–вс
+            ("Иван", "Массажист", "#1C8C4A", 30, [0, 2, 4]),                    # пн/ср/пт
         ]
         employees = {}
-        for name, spec, color, order in masters:
+        for name, spec, color, order, wdays in masters:
             e, _ = Employee.objects.get_or_create(
                 full_name=name,
-                defaults={"specialization": spec, "color": color, "sort_order": order},
+                defaults={"specialization": spec, "color": color,
+                          "sort_order": order, "work_days": wdays},
             )
             employees[name] = e
         self.stdout.write(f"  мастеров: {len(employees)}")

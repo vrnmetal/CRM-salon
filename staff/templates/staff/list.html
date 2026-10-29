@@ -1,37 +1,41 @@
 {% extends "base.html" %}
-{% load core_extras %}
 {% block title %}Сотрудники · {{ brand.name }}{% endblock %}
 
 {% block content %}
-  <div class="page-head"><h1 class="display">Сотрудники</h1></div>
+  <div class="page-head">
+    <h1 class="display" style="margin:0;">Сотрудники</h1>
+    {% if can_manage %}
+      <a class="btn primary" href="{% url 'staff_manage' %}">Управление</a>
+    {% endif %}
+  </div>
 
-  <div class="grid cols-2" style="align-items:start;">
-    <div class="card" style="padding:4px 22px;">
-      {% for e in employees %}
-        <div class="row">
-          <span style="width:10px; height:10px; border-radius:50%; background:{{ e.color|default:'#0071E3' }};"></span>
-          <div class="main">
-            <div class="title">{{ e.full_name }}</div>
-            {% if e.specialization %}<div class="sub">{{ e.specialization }}</div>{% endif %}
-          </div>
-          {% if not e.is_active %}<span class="muted" style="font-size:13px;">скрыт</span>{% endif %}
-        </div>
-      {% empty %}
-        <div class="empty"><div class="big">Сотрудников нет</div>Добавьте первого справа.</div>
+  {# Вкладки: работающие / уволенные #}
+  <div class="segmented" style="margin-bottom:18px;">
+    <a href="?tab=working" class="{% if tab == 'working' %}on{% endif %}">Работают</a>
+    <a href="?tab=dismissed" class="{% if tab == 'dismissed' %}on{% endif %}">Уволенные</a>
+  </div>
+
+  {% if tab == 'working' %}
+    {# В смене сегодня #}
+    <div class="section-label">В смене сегодня · {{ on_shift|length }}</div>
+    <div class="card" style="padding:6px 0; margin-bottom:18px;">
+      {% for r in on_shift %}{% include "staff/_row.html" with r=r shift=1 %}{% empty %}
+        <div class="empty" style="padding:28px;">Сегодня никто не в смене.</div>
       {% endfor %}
     </div>
 
-    {% if request.user|can:"staff.create" %}
-    <div class="card">
-      <h3>Новый сотрудник</h3>
-      <form method="post">
-        {% csrf_token %}
-        <div class="field"><label>Имя</label><input type="text" name="full_name" required></div>
-        <div class="field"><label>Специализация</label><input type="text" name="specialization" placeholder="Парикмахер, мастер маникюра…"></div>
-        <div class="field"><label>Цвет в журнале</label><input type="color" name="color" value="#0071E3"></div>
-        <button class="btn primary" type="submit" style="width:100%; justify-content:center;">Добавить</button>
-      </form>
+    {# Работают, но не в смене сегодня #}
+    <div class="section-label">Не в смене сегодня · {{ off_shift|length }}</div>
+    <div class="card" style="padding:6px 0;">
+      {% for r in off_shift %}{% include "staff/_row.html" with r=r shift=0 %}{% empty %}
+        <div class="empty" style="padding:28px;">Все работающие сегодня в смене.</div>
+      {% endfor %}
     </div>
-    {% endif %}
-  </div>
+  {% else %}
+    <div class="card" style="padding:6px 0;">
+      {% for r in dismissed %}{% include "staff/_row.html" with r=r shift=0 %}{% empty %}
+        <div class="empty" style="padding:28px;"><div class="big">Нет уволенных</div>Здесь появятся сотрудники, которых уволили.</div>
+      {% endfor %}
+    </div>
+  {% endif %}
 {% endblock %}

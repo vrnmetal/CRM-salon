@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Финансы · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1 class="display" style="margin:0;">Финансы</h1>
+      <div class="muted" style="font-size:14px; margin-top:4px;">Касса по проведённым визитам · {{ start|date:"j M" }} — {{ end|date:"j M" }}</div>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <div class="segmented">
+        {% for code, label in periods %}
+          <a href="?period={{ code }}" class="{% if period == code %}on{% endif %}">{{ label }}</a>
+        {% endfor %}
+        <button type="button" class="seg-btn {% if period == 'custom' %}on{% endif %}"
+                onclick="var r=document.getElementById('range');r.style.display=r.style.display==='flex'?'none':'flex';">Задать</button>
+      </div>
+    </div>
+  </div>
+
+  {# Произвольный диапазон #}
+  <form id="range" method="get" class="range-row" style="display:{% if period == 'custom' %}flex{% else %}none{% endif %};">
+    <input type="date" name="from" value="{% if period == 'custom' %}{{ start_iso }}{% endif %}" max="{{ today_iso }}" required>
+    <span class="muted">—</span>
+    <input type="date" name="to" value="{% if period == 'custom' %}{{ end_iso }}{% endif %}" max="{{ today_iso }}" required>
+    <button class="btn primary" type="submit">Показать</button>
+  </form>
+
+  <div class="grid auto" style="margin-bottom:16px;">
+    <div class="tile">
+      <div class="label">Выручка (касса)</div>
+      <div class="value">{{ revenue|money }}&nbsp;₽</div>
+    </div>
+    <div class="tile">
+      <div class="label">Визитов проведено</div>
+      <div class="value">{{ visits }}</div>
+    </div>
+    <div class="tile">
+      <div class="label">Средний чек</div>
+      <div class="value">{{ avg_check|money }}&nbsp;₽</div>
+    </div>
+    <div class="tile">
+      <div class="label">Упущено на неявках</div>
+      <div class="value" style="color:var(--status-noshow);">{{ missed|money }}&nbsp;₽</div>
+      <div class="delta flat">{{ missed_count }} неявок</div>
+    </div>
+  </div>
+
+  {# Выручка по дням #}
+  <div class="card" style="margin-bottom:16px;">
+    <h3 style="margin-top:0;">Выручка по дням</h3>
+    <div class="spark" style="height:130px;">
+      {% for d in days %}
+        <div class="spark-col" title="{{ d.label }} · {{ d.rev|money }} ₽">
+          <div class="spark-bar{% if d.is_today %} today{% endif %}" style="height:{{ d.pct }}%;"></div>
+          <div class="spark-lbl">{% if days|length <= 14 %}{{ d.dow }}{% else %}{{ d.date.day }}{% endif %}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="grid cols-2" style="align-items:start;">
+    {# По мастерам #}
+    <div class="card">
+      <h3 style="margin-top:0;">По мастерам</h3>
+      {% for m in by_master %}
+        <div class="fin-row">
+          <div class="fin-name">{{ m.name }}</div>
+          <div class="fin-sub">{{ m.visits }} виз.</div>
+          <div class="fin-sum">{{ m.sum|money }} ₽</div>
+        </div>
+      {% empty %}
+        <div class="empty" style="padding:24px;">Нет проведённых визитов за период.</div>
+      {% endfor %}
+    </div>
+
+    {# По услугам #}
+    <div class="card">
+      <h3 style="margin-top:0;">По услугам</h3>
+      {% for s in by_service %}
+        <div class="fin-row">
+          <div class="fin-name">{{ s.name }}</div>
+          <div class="fin-sub">×{{ s.count }}</div>
+          <div class="fin-sum">{{ s.sum|money }} ₽</div>
+        </div>
+      {% empty %}
+        <div class="empty" style="padding:24px;">Нет данных по услугам за период.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="muted" style="font-size:13px; margin-top:16px;">
+    Это касса по проведённым визитам. Приём оплат, эквайринг и чеки (54-ФЗ) — отдельный слой, добавим позже.
+  </div>
+{% endblock %}

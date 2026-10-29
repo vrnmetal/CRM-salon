@@ -20,6 +20,12 @@
         <div class="muted" style="font-size:14px;">Создание и удаление учётных записей сотрудников.</div>
       </a>
     {% endif %}
+    {% if request.user|can:"staff.create" or request.user|can:"staff.edit" %}
+      <a class="card" href="{% url 'staff_manage' %}" style="text-decoration:none; color:inherit;">
+        <h3>Сотрудники</h3>
+        <div class="muted" style="font-size:14px;">Создание, график работы, цвет в журнале, увольнение.</div>
+      </a>
+    {% endif %}
     {% if request.user|can:"branding.manage" %}
       <a class="card" href="{% url 'branding_settings' %}" style="text-decoration:none; color:inherit;">
         <h3>Брендирование</h3>

@@ -296,7 +296,7 @@ input:focus, select:focus, textarea:focus {
 
 /* --- Модалка создания аккаунта --- */
 .modal { border: none; border-radius: var(--radius); padding: 24px; width: min(440px, 92vw);
-         box-shadow: 0 24px 60px rgba(0,0,0,.22); background: var(--surface-1); color: var(--text); }
+         box-shadow: 0 24px 60px rgba(0,0,0,.22); background: var(--surface); color: var(--text); }
 .modal::backdrop { background: rgba(0,0,0,.32); backdrop-filter: blur(2px); }
 
 @media (max-width: 640px) {
@@ -325,3 +325,77 @@ input:focus, select:focus, textarea:focus {
              background: var(--surface-3, #E3E3E8); transition: background .15s; }
 .spark-bar.today { background: var(--accent); }
 .spark-lbl { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+/* --- Вкладки-ссылки (сотрудники) --- */
+.segmented a { display: inline-block; padding: 8px 16px; border: 1px solid var(--border-strong);
+               border-radius: var(--radius-sm); font-size: 14px; text-decoration: none;
+               color: var(--text-muted); }
+.segmented a:hover { background: var(--surface-2); }
+.segmented a.on { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+
+/* --- Ростер сотрудников --- */
+.section-label { font-size: 13px; color: var(--text-muted); font-weight: 560; margin: 0 2px 8px;
+                 text-transform: uppercase; letter-spacing: 0.03em; }
+.emp-row { display: grid; grid-template-columns: auto 1fr auto auto; gap: 14px; align-items: center;
+           padding: 12px 20px; border-bottom: 1px solid var(--border); }
+.emp-row:last-child { border-bottom: none; }
+.emp-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 10px; }
+.emp-id .title { font-weight: 540; }
+.emp-id .sub { font-size: 13px; color: var(--text-soft); }
+.emp-days { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; max-width: 200px; }
+.day-chip { font-size: 11px; padding: 2px 7px; border-radius: 20px; background: var(--surface-2); color: var(--text-muted); }
+
+/* --- Управление сотрудниками (настройки) --- */
+.emp-edit { margin-bottom: 14px; }
+.emp-edit-head { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; font-size: 15px; }
+.day-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+.day-opt { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border: 1px solid var(--border-strong);
+           border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; user-select: none; }
+.day-opt input { width: auto; accent-color: var(--accent); }
+
+/* --- Сквозной поиск на дашборде --- */
+.search-wrap { position: relative; max-width: 520px; }
+.search-ic { position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+             width: 18px; height: 18px; color: var(--text-muted); pointer-events: none; }
+#gsearch { width: 100%; padding: 12px 14px 12px 42px; font-size: 15px;
+           border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); }
+#gsearch:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); outline: none; }
+.search-res { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20;
+              background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+              box-shadow: 0 16px 40px rgba(0,0,0,.14); overflow: hidden; }
+.search-item { display: flex; justify-content: space-between; gap: 12px; padding: 11px 16px;
+               text-decoration: none; color: inherit; border-bottom: 1px solid var(--border); }
+.search-item:last-child { border-bottom: none; }
+.search-item:hover { background: var(--surface-2); }
+.search-name { font-weight: 500; }
+.search-phone { color: var(--text-soft); font-size: 14px; }
+.search-empty { padding: 14px 16px; color: var(--text-muted); font-size: 14px; }
+
+@media (max-width: 640px) {
+  .emp-row { grid-template-columns: auto 1fr; }
+  .emp-days, .emp-meta { grid-column: 2; justify-content: flex-start; }
+}
+
+/* --- Финансы: строки разбивки --- */
+.fin-row { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center;
+           padding: 11px 2px; border-bottom: 1px solid var(--border); }
+.fin-row:last-child { border-bottom: none; }
+.fin-name { font-weight: 500; }
+.fin-sub { color: var(--text-soft); font-size: 13px; }
+.fin-sum { font-weight: 600; letter-spacing: -0.01em; min-width: 92px; text-align: right; }
+
+/* --- Сквозной поиск: группы «где найдено» --- */
+.search-res { max-height: 60vh; overflow-y: auto; }
+.search-group { padding: 9px 16px 5px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+                text-transform: uppercase; color: var(--text-muted); background: var(--surface-2);
+                border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+
+/* --- Кнопка «Задать» в сегменте периодов + строка диапазона (финансы) --- */
+.segmented .seg-btn { display: inline-block; padding: 8px 16px; border: 1px solid var(--border-strong);
+                      border-radius: var(--radius-sm); font-size: 14px; background: transparent;
+                      color: var(--text-muted); cursor: pointer; }
+.segmented .seg-btn:hover { background: var(--surface-2); }
+.segmented .seg-btn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+.range-row { gap: 10px; align-items: center; margin: 0 0 16px; }
+.range-row input[type="date"] { padding: 9px 12px; border: 1px solid var(--border-strong);
+                                border-radius: var(--radius-sm); background: var(--surface); }

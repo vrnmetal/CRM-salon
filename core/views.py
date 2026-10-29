@@ -7,12 +7,58 @@
 """
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from core.forms import AccountCreateForm, BrandingForm
 from core.models import Role, User
 from core.permissions import REGISTRY, has_perm, requires, requires_any
+
+
+# --- Сквозной поиск: клиенты, сотрудники, услуги — с группами «где найдено» ---
+@login_required
+def global_search(request):
+    q = (request.GET.get("q") or "").strip()
+    groups = []
+    if len(q) >= 2:
+        # Клиенты — по имени или цифрам телефона
+        if has_perm(request.user, "client.view"):
+            from clients.models import Client
+            items = []
+            for c in Client.objects.filter(Q(full_name__icontains=q) | Q(phone__icontains=q)).order_by("full_name")[:6]:
+                items.append({"name": c.full_name or c.phone, "sub": c.phone,
+                              "url": reverse("client_detail", args=[c.id])})
+            if items:
+                groups.append({"label": "Клиенты", "items": items})
+
+        # Сотрудники — по имени, телефону, специализации
+        if has_perm(request.user, "staff.view"):
+            from staff.models import Employee
+            items = []
+            for e in Employee.objects.filter(
+                Q(full_name__icontains=q) | Q(phone__icontains=q) | Q(specialization__icontains=q)
+            ).order_by("full_name")[:6]:
+                sub = e.specialization or ""
+                if not e.is_active:
+                    sub = (sub + " · уволен").strip(" ·")
+                items.append({"name": e.full_name, "sub": sub, "url": reverse("staff_list")})
+            if items:
+                groups.append({"label": "Сотрудники", "items": items})
+
+        # Услуги — по названию
+        if has_perm(request.user, "service.view"):
+            from appointments.models import Service
+            items = []
+            for s in Service.objects.filter(name__icontains=q).order_by("name")[:6]:
+                items.append({"name": s.name, "sub": f"{s.price:.0f} ₽ · {s.duration_min} мин",
+                              "url": reverse("service_list")})
+            if items:
+                groups.append({"label": "Услуги", "items": items})
+
+    return JsonResponse({"groups": groups})
 
 
 # --- Домашний роутер: по роли сразу открываем нужный стартовый экран ---

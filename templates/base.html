@@ -6,7 +6,10 @@
   <title>{% block title %}{{ brand.name|default:"Салон" }}{% endblock %}</title>
 
   {# Единый дизайн-файл. ?v — поднимать при каждой правке app.css (кэш). #}
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=11">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=17">
+  {# Календарь/часы — свои окна вместо системных (flatpickr, локально) #}
+  <link rel="stylesheet" href="{% static 'vendor/flatpickr/flatpickr.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/flatpickr-theme.css' %}?v=1">
 
   {# White-label: переопределяем акцент тенанта ПОСЛЕ app.css (каскад побеждает). #}
   {% if brand.accent %}
@@ -58,6 +61,11 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
           Услуги</a>
       {% endif %}
+      {% if request.user|can:"finance.view" %}
+        <a href="{% url 'finance_home' %}" class="{% if request.resolver_match.url_name == 'finance_home' %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><path d="M3 7h18v12H3zM3 11h18M7 15h4"/></svg>
+          Финансы</a>
+      {% endif %}
     </nav>
 
     <div class="spacer"></div>
@@ -105,14 +113,31 @@ document.addEventListener('touchstart', function (e) {
   if (h && h.dataset.hint) { alert(h.dataset.hint); }
 }, { passive: true });
 
-// Поля даты/времени: открывать нативный пикер при клике в ЛЮБОЕ место поля,
-// а не только по иконке. showPicker() вызывается в обработчике клика (жест пользователя).
-document.addEventListener('click', function (e) {
-  var el = e.target;
-  if (el.tagName === 'INPUT' && (el.type === 'date' || el.type === 'time')) {
-    try { el.showPicker(); } catch (err) { /* не поддерживается — обычное поведение */ }
-  }
-});
+</script>
+
+{# Свои окна даты/времени вместо системных — flatpickr, подключён локально #}
+<script src="{% static 'vendor/flatpickr/flatpickr.min.js' %}"></script>
+<script src="{% static 'vendor/flatpickr/ru.js' %}"></script>
+<script>
+(function () {
+  if (!window.flatpickr) return;
+  try { flatpickr.localize(flatpickr.l10ns.ru); } catch (e) {}
+
+  // Все поля даты: календарь с читаемой подписью, в форму уходит Y-m-d
+  flatpickr('input[type=date]', {
+    dateFormat: 'Y-m-d',
+    altInput: true, altFormat: 'j M Y',
+    disableMobile: true   // и на телефоне своё окно, не системное
+  });
+
+  // Все поля времени: часы с шагом 5 мин, 24ч, в форму уходит H:i
+  flatpickr('input[type=time]', {
+    enableTime: true, noCalendar: true, time_24hr: true,
+    dateFormat: 'H:i', minuteIncrement: 5,
+    altInput: true, altFormat: 'H:i',
+    disableMobile: true
+  });
+})();
 </script>
 </body>
 </html>

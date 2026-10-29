@@ -9,7 +9,9 @@ from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Max, Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 from django.utils import timezone
 
 from appointments.models import Appointment
@@ -48,6 +50,23 @@ def client_list(request):
         rows.append({"c": c, "visits": c.visits, "last": c.last, "status": code, "status_label": label})
 
     return render(request, "clients/list.html", {"rows": rows, "q": q, "total": len(rows)})
+
+
+# --- Живой поиск клиента (JSON): по имени или цифрам телефона ---
+@login_required
+@requires("client.view")
+def client_search(request):
+    q = (request.GET.get("q") or "").strip()
+    results = []
+    if len(q) >= 2:
+        qs = Client.objects.filter(Q(full_name__icontains=q) | Q(phone__icontains=q)).order_by("full_name")[:8]
+        for c in qs:
+            results.append({
+                "name": c.full_name or c.phone,
+                "phone": c.phone,
+                "url": reverse("client_detail", args=[c.id]),
+            })
+    return JsonResponse({"results": results})
 
 
 # --- Карточка клиента: профиль-сводка сверху + лента визитов ---
