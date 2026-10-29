@@ -8,10 +8,12 @@
       <a class="back" href="{% url 'journal' %}?date={{ a.start|date:'Y-m-d' }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
       <h1 class="display" style="margin:0;">Запись</h1>
     </div>
+    {% if request.user|can:"appointment.edit" %}
+      <a class="btn primary" href="{% url 'appointment_edit' a.id %}">Изменить</a>
+    {% endif %}
   </div>
 
   <div class="card" style="max-width:520px;">
-    {# Статус и время #}
     <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
       <span class="dot {{ a.status }}"></span>
       <span style="font-weight:500;">{{ a.get_status_display }}</span>
@@ -27,14 +29,30 @@
       {% endif %}
       <tr><td style="color:var(--text-muted); padding:7px 0;">Мастер</td>
           <td style="text-align:right;">{{ a.employee.full_name }}</td></tr>
-      <tr><td style="color:var(--text-muted); padding:7px 0;">Услуга</td>
-          <td style="text-align:right;">{% if a.service %}{{ a.service.name }}{% else %}—{% endif %}</td></tr>
-      <tr><td style="color:var(--text-muted); padding:7px 0;">Стоимость</td>
-          <td style="text-align:right;" class="tnum">{{ a.price|floatformat:0 }} ₽</td></tr>
-      {% if a.comment %}
-        <tr><td style="color:var(--text-muted); padding:7px 0; vertical-align:top;">Комментарий</td>
-            <td style="text-align:right;">{{ a.comment }}</td></tr>
-      {% endif %}
     </table>
+
+    {# Услуги записи (может быть несколько) #}
+    <div style="border-top:1px solid var(--border); margin-top:12px; padding-top:12px;">
+      {% for l in lines %}
+        <div style="display:flex; justify-content:space-between; padding:5px 0; font-size:14px;">
+          <span>{{ l.service.name }}</span>
+          <span class="tnum muted">{{ l.price|floatformat:0 }} ₽</span>
+        </div>
+      {% empty %}
+        <div style="display:flex; justify-content:space-between; padding:5px 0; font-size:14px;">
+          <span>{% if a.service %}{{ a.service.name }}{% else %}—{% endif %}</span>
+        </div>
+      {% endfor %}
+      <div style="display:flex; justify-content:space-between; padding-top:10px; margin-top:6px; border-top:1px solid var(--border);">
+        <span style="font-weight:500;">К оплате</span>
+        <span class="tnum" style="font-weight:600; font-size:17px;">{{ a.price|floatformat:0 }} ₽</span>
+      </div>
+    </div>
+
+    {% if a.comment %}
+      <div style="border-top:1px solid var(--border); margin-top:12px; padding-top:12px; font-size:14px;">
+        <div style="color:var(--text-muted); margin-bottom:4px;">Комментарий</div>{{ a.comment }}
+      </div>
+    {% endif %}
   </div>
 {% endblock %}

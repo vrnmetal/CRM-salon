@@ -28,6 +28,12 @@
       <div id="hline" style="position:absolute; left:0; right:0; border-top:1px dashed var(--accent); display:none; pointer-events:none; z-index:5;"></div>
       <div id="htime" class="tnum" style="position:absolute; left:0; display:none; pointer-events:none; z-index:6; background:var(--accent); color:#fff; font-size:11px; padding:1px 6px; border-radius:6px; transform:translateY(-50%);"></div>
 
+      {# Линия текущего времени (только когда смотрим сегодня) #}
+      {% if now_label %}
+        <div style="position:absolute; top:{{ now_top|add:52 }}px; left:0; right:0; border-top:2px solid var(--status-noshow); z-index:4; pointer-events:none;"></div>
+        <div class="tnum" style="position:absolute; top:{{ now_top|add:52 }}px; left:0; transform:translateY(-50%); background:var(--status-noshow); color:#fff; font-size:11px; font-weight:500; padding:1px 6px; border-radius:6px; z-index:4; pointer-events:none;">{{ now_label }}</div>
+      {% endif %}
+
 
       {# Линейка времени слева #}
       <div style="flex-shrink:0; width:50px;">
@@ -68,7 +74,7 @@
                   <span class="dot {{ b.appt.status }}" style="margin-top:4px;"></span>
                 </div>
                 <div style="font-size:14px; color:var(--text); font-weight:500;">{{ b.appt.client.full_name }}</div>
-                {% if b.appt.service %}<div style="font-size:12px; color:var(--text-soft);">{{ b.appt.service.name }}</div>{% endif %}
+                {% if b.appt.service %}<div style="font-size:12px; color:var(--text-soft);">{{ b.appt.service.name }}{% if b.appt.extra_count %} +{{ b.appt.extra_count }}{% endif %}</div>{% endif %}
               </a>
             {% endfor %}
           </div>

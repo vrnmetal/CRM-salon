@@ -85,15 +85,20 @@ class User(AbstractUser):
         blank=True,
         verbose_name="Тенант",
     )
-    # Роль внутри тенанта (определяет набор прав)
+    # Роль — только ПРЕСЕТ (заготовка галочек), с которого копируются права при
+    # назначении. Реальные доступы хранятся на пользователе (permission_codes),
+    # поэтому их можно точечно править в конкретном аккаунте.
     role = models.ForeignKey(
         Role,
         on_delete=models.SET_NULL,
         related_name="users",
         null=True,
         blank=True,
-        verbose_name="Роль",
+        verbose_name="Роль (пресет)",
     )
+    # Персональный набор КОДОВ прав этого аккаунта (deny-by-default). Копируется из
+    # пресета роли при назначении, затем редактируется индивидуально.
+    permission_codes = models.JSONField("Коды прав", default=list, blank=True)
     # Провайдерский админ: «одно кольцо» над всеми тенантами. Требует 2FA (позже).
     is_provider_admin = models.BooleanField("Провайдерский админ", default=False)
     # Тумблер подсказок на уровне пользователя (новичок — вкл, профи — выкл).

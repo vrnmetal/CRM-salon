@@ -11,8 +11,8 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
-from appointments.forms import QuickAppointmentForm
-from appointments.models import Appointment
+from appointments.forms import EditAppointmentForm, QuickAppointmentForm
+from appointments.models import Appointment, AppointmentService, Service
 from clients.models import Client
 from core.permissions import requires
 from staff.models import Employee
@@ -75,6 +75,16 @@ def journal(request):
     ]
     grid_height = (DAY_END_HOUR - DAY_START_HOUR) * HOUR_PX
 
+    # Линия текущего времени — только если смотрим сегодня и сейчас в пределах сетки
+    now_top = None
+    now_label = None
+    if day == timezone.localdate():
+        now = timezone.localtime()
+        mins = (now.hour - DAY_START_HOUR) * 60 + now.minute
+        if 0 <= mins <= (DAY_END_HOUR - DAY_START_HOUR) * 60:
+            now_top = round(mins * HOUR_PX / 60)
+            now_label = now.strftime("%H:%M")
+
     context = {
         "day": day,
         "prev_day": (day - timedelta(days=1)).isoformat(),
@@ -85,6 +95,8 @@ def journal(request):
         "hours": hours,
         "grid_height": grid_height,
         "hour_px": HOUR_PX,
+        "now_top": now_top,
+        "now_label": now_label,
     }
     return render(request, "appointments/journal.html", context)
 
@@ -93,13 +105,117 @@ def journal(request):
 @login_required
 @requires("appointment.view")
 def appointment_detail(request, pk):
-    # objects — тенант-ограниченный менеджер, чужую запись не отдаст
     from django.shortcuts import get_object_or_404
 
     appt = get_object_or_404(
         Appointment.objects.select_related("client", "employee", "service"), pk=pk
     )
-    return render(request, "appointments/detail.html", {"a": appt})
+    lines = appt.lines.select_related("service").all()
+    return render(request, "appointments/detail.html", {"a": appt, "lines": lines})
+
+
+# --- Редактирование записи ---
+@login_required
+@requires("appointment.edit")
+def appointment_edit(request, pk):
+    from django.shortcuts import get_object_or_404
+
+    appt = get_object_or_404(Appointment, pk=pk)
+
+    if request.method == "POST":
+        form = EditAppointmentForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            # Клиент: находим/создаём по телефону (данные подтягиваются из базы)
+            phone = cd["client_phone"].strip()
+            client, _ = Client.objects.get_or_create(
+                phone=phone, defaults={"full_name": cd["client_name"].strip() or phone}
+            )
+            if cd["client_name"].strip():
+                client.full_name = cd["client_name"].strip()
+                client.save(update_fields=["full_name"])
+
+            services = form.chosen_services()
+            # Пересобираем строки услуг
+            appt.lines.all().delete()
+            total_from_services = 0
+            for s in services:
+                AppointmentService.objects.create(appointment=appt, service=s, price=s.price)
+                total_from_services += s.price
+
+            appt.client = client
+            appt.employee = cd["employee"]
+            appt.service = services[0] if services else None  # первая — для компактного вида
+            appt.start = timezone.make_aware(datetime.combine(cd["date"], cd["time"]))
+            appt.duration_min = sum(s.duration_min for s in services) or appt.duration_min
+            appt.status = cd["status"]
+            # Цена: если указали вручную — она (скидка/надбавка), иначе сумма услуг
+            appt.price = cd["price"] if cd["price"] is not None else total_from_services
+            appt.comment = cd["comment"].strip()
+            appt.save()
+
+            return redirect(reverse("appointment_detail", args=[appt.id]))
+    else:
+        # Префилл из текущей записи
+        local = timezone.localtime(appt.start)
+        initial = {
+            "client_phone": appt.client.phone,
+            "client_name": appt.client.full_name,
+            "employee": appt.employee_id,
+            "date": local.date(),
+            "time": local.time().strftime("%H:%M"),
+            "status": appt.status,
+            "price": appt.price,
+            "comment": appt.comment,
+        }
+        # Префилл выбранных услуг из строк
+        for idx, line in enumerate(appt.lines.all(), start=1):
+            if idx <= 4:
+                initial[f"service_{idx}"] = line.service_id
+        form = EditAppointmentForm(initial=initial)
+
+    # Список клиентов для автоподстановки (телефон → имя)
+    clients = list(Client.objects.values("phone", "full_name"))
+    return render(request, "appointments/edit.html", {"form": form, "a": appt, "clients_json": clients})
+
+
+# --- Удаление записи ---
+@login_required
+@requires("appointment.delete")
+def appointment_delete(request, pk):
+    from django.shortcuts import get_object_or_404
+
+    if request.method != "POST":
+        return redirect(reverse("appointment_detail", args=[pk]))
+    appt = get_object_or_404(Appointment, pk=pk)
+    day = timezone.localtime(appt.start).date().isoformat()
+    appt.delete()
+    return redirect(reverse("journal") + f"?date={day}")
+
+
+# --- Список услуг (управление из интерфейса, не только админка) ---
+@login_required
+@requires("service.view")
+def service_list(request):
+    from appointments.models import ServiceCategory
+
+    if request.method == "POST":
+        # Создание услуги (требует отдельного права)
+        from core.permissions import has_perm
+        if not has_perm(request.user, "service.create"):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied("Нет права: service.create")
+        name = (request.POST.get("name") or "").strip()
+        if name:
+            Service.objects.create(
+                name=name,
+                duration_min=int(request.POST.get("duration_min") or 60),
+                price=request.POST.get("price") or 0,
+            )
+        return redirect("service_list")
+
+    services = Service.objects.select_related("category").all()
+    return render(request, "appointments/services.html", {"services": services})
 
 
 # --- Быстрая запись: короткая форма -> создаёт/находит клиента и пишет запись ---
@@ -125,7 +241,7 @@ def quick_add(request):
 
             service = cd["service"]
             # Создаём запись; длительность и цену берём из услуги
-            Appointment.objects.create(
+            appt = Appointment.objects.create(
                 client=client,
                 employee=cd["employee"],
                 service=service,
@@ -134,6 +250,8 @@ def quick_add(request):
                 price=service.price,
                 pdn_consent=cd["pdn_consent"],
             )
+            # Строка услуги (запись может позже получить ещё услуги при редактировании)
+            AppointmentService.objects.create(appointment=appt, service=service, price=service.price)
             # Возвращаемся в журнал на день записи
             url = reverse("journal") + f"?date={cd['date'].isoformat()}"
             return redirect(url)

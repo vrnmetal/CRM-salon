@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Услуги · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head"><h1 class="display">Услуги</h1></div>
+
+  <div class="grid cols-2" style="align-items:start;">
+    <div class="card" style="padding:4px 22px;">
+      {% for s in services %}
+        <div class="row">
+          <div class="main">
+            <div class="title">{{ s.name }}</div>
+            <div class="sub">{% if s.category %}{{ s.category.name }} · {% endif %}{{ s.duration_min }} мин</div>
+          </div>
+          <div class="amount tnum">{{ s.price|floatformat:0 }} ₽</div>
+        </div>
+      {% empty %}
+        <div class="empty"><div class="big">Услуг нет</div>Добавьте первую справа.</div>
+      {% endfor %}
+    </div>
+
+    {% if request.user|can:"service.create" %}
+    <div class="card">
+      <h3>Новая услуга</h3>
+      <form method="post">
+        {% csrf_token %}
+        <div class="field"><label>Название</label><input type="text" name="name" required></div>
+        <div style="display:flex; gap:12px;">
+          <div class="field" style="flex:1;"><label>Длительность, мин</label><input type="number" name="duration_min" value="60" min="5" step="5"></div>
+          <div class="field" style="flex:1;"><label>Цена, ₽</label><input type="number" name="price" value="0" min="0" step="50"></div>
+        </div>
+        <button class="btn primary" type="submit" style="width:100%; justify-content:center;">Добавить</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+{% endblock %}

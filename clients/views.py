@@ -58,6 +58,7 @@ def client_detail(request, pk):
     appts = list(
         Appointment.objects.filter(client=client)
         .select_related("service", "employee")
+        .prefetch_related("lines__service")
         .order_by("-start")
     )
     came = [a for a in appts if a.status == Appointment.STATUS_CAME]
@@ -69,8 +70,15 @@ def client_detail(request, pk):
     last_dt = came[0].start if came else None
     code, label = _status(last_dt)
 
-    # Автотеги по услугам (из состоявшихся визитов)
-    svc_counter = Counter(a.service.name for a in came if a.service)
+    # Автотеги по услугам (из состоявшихся визитов; учитываем все услуги записи)
+    svc_counter = Counter()
+    for a in came:
+        lines = list(a.lines.all())
+        if lines:
+            for l in lines:
+                svc_counter[l.service.name] += 1
+        elif a.service:
+            svc_counter[a.service.name] += 1
     tags = svc_counter.most_common()
 
     # Любимый мастер (к кому чаще ходил)

@@ -103,3 +103,28 @@ class Appointment(TenantModel):
 
     def __str__(self):
         return f"{self.start:%d.%m %H:%M} · {self.client}"
+
+    @property
+    def extra_count(self):
+        # Сколько услуг сверх первой (для компактной пометки «+N» в журнале)
+        n = self.lines.count()
+        return n - 1 if n > 1 else 0
+
+
+# --- Строка услуги в записи (одна запись может включать несколько услуг) ---
+class AppointmentService(TenantModel):
+    appointment = models.ForeignKey(
+        Appointment, on_delete=models.CASCADE, related_name="lines", verbose_name="Запись",
+    )
+    service = models.ForeignKey(
+        Service, on_delete=models.PROTECT, related_name="appointment_lines", verbose_name="Услуга",
+    )
+    # Цена строки на момент оказания (из услуги, можно скорректировать)
+    price = models.DecimalField("Цена, ₽", max_digits=10, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = "Услуга в записи"
+        verbose_name_plural = "Услуги в записи"
+
+    def __str__(self):
+        return f"{self.service} · {self.price}"

@@ -47,6 +47,7 @@ register("appointment.view", "Видеть журнал записей", "appoin
 register("appointment.create", "Создавать запись", "appointments", "Записи")
 register("appointment.edit", "Изменять запись", "appointments", "Записи")
 register("appointment.cancel", "Отменять запись", "appointments", "Записи")
+register("appointment.delete", "Удалять запись", "appointments", "Записи")
 
 # --- Клиенты ---
 register("client.view", "Видеть клиентов", "clients", "Клиенты")
@@ -60,6 +61,11 @@ register("staff.view", "Видеть сотрудников", "staff", "Сотр
 register("staff.create", "Создавать сотрудника", "staff", "Сотрудники")
 register("staff.edit", "Изменять сотрудника", "staff", "Сотрудники")
 register("staff.schedule.edit", "Менять график работы", "staff", "Сотрудники")
+
+# --- Услуги ---
+register("service.view", "Видеть услуги", "appointments", "Услуги")
+register("service.create", "Создавать услугу", "appointments", "Услуги")
+register("service.edit", "Изменять услугу", "appointments", "Услуги")
 
 # --- Дашборд ---
 register("dashboard.view", "Видеть дашборд собственника", "dashboard", "Аналитика")
@@ -100,11 +106,9 @@ def has_perm(user, code: str) -> bool:
         if not is_module_enabled(getattr(user, "tenant", None), perm.module):
             return False
 
-    # Наконец — есть ли код в наборе роли (deny-by-default)
-    role = getattr(user, "role", None)
-    if role is None:
-        return False
-    return code in (role.permission_codes or [])
+    # Наконец — есть ли код в ПЕРСОНАЛЬНОМ наборе аккаунта (deny-by-default).
+    # Права хранятся на пользователе; роль — лишь пресет, с которого они копируются.
+    return code in (getattr(user, "permission_codes", None) or [])
 
 
 # ============================================================================

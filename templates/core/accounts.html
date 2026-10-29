@@ -7,51 +7,63 @@
       <a class="back" href="{% url 'settings_home' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
       <h1 class="display" style="margin:0;">Аккаунты</h1>
     </div>
+    <button class="btn primary" type="button" onclick="document.getElementById('new-account').showModal()">Новый аккаунт</button>
   </div>
 
-  <div class="grid cols-2" style="align-items:start;">
-    {# Список сотрудников #}
-    <div class="card" style="padding:4px 22px;">
-      {% for u in staff %}
-        <div class="row">
-          <div class="main">
+  {# Список сотрудников — одна строка на аккаунт, аккуратно выровнено #}
+  <div class="card" style="padding:6px 0;">
+    {% for u in staff %}
+      <div class="acc-row">
+        <div class="acc-id">
+          <div class="acc-avatar">{{ u.first_name|default:u.username|first|upper }}</div>
+          <div>
             <div class="title">{{ u.first_name|default:u.username }}</div>
-            <div class="sub">{{ u.username }}{% if u.role %} · {{ u.role.name }}{% endif %}</div>
+            <div class="sub">{{ u.username }}{% if u.role %} · пресет «{{ u.role.name }}»{% endif %}</div>
           </div>
+        </div>
+        <div class="acc-meta">
+          <span class="tag">{{ u.permission_codes|length }} прав</span>
+        </div>
+        <div class="acc-actions">
           {% if u.id != request.user.id %}
+            <a class="btn" href="{% url 'account_access' u.id %}">Доступ</a>
             <form method="post" action="{% url 'account_delete' u.id %}" onsubmit="return confirm('Удалить аккаунт {{ u.username }}?');">
               {% csrf_token %}
-              <button class="btn" type="submit" style="padding:6px 12px; color:var(--status-noshow);">Удалить</button>
+              <button class="btn danger" type="submit">Удалить</button>
             </form>
           {% else %}
-            <span class="muted" style="font-size:13px;">вы</span>
+            <a class="btn" href="{% url 'account_access' u.id %}">Доступ</a>
+            <span class="muted" style="font-size:13px; align-self:center;">вы</span>
           {% endif %}
         </div>
-      {% empty %}
-        <div class="empty"><div class="big">Пока нет сотрудников</div>Создайте первый аккаунт справа.</div>
-      {% endfor %}
-    </div>
-
-    {# Форма создания #}
-    <div class="card">
-      <h3>Новый аккаунт</h3>
-      <form method="post">
-        {% csrf_token %}
-        <div class="field">
-          <label>Логин</label>{{ form.username }}
-          {% if form.username.errors %}<div style="color:var(--status-noshow); font-size:13px;">{{ form.username.errors|striptags }}</div>{% endif %}
-        </div>
-        <div class="field"><label>Имя</label>{{ form.full_name }}</div>
-        <div class="field">
-          <label>Роль</label>{{ form.role }}
-          {% if form.role.errors %}<div style="color:var(--status-noshow); font-size:13px;">{{ form.role.errors|striptags }}</div>{% endif %}
-        </div>
-        <div class="field">
-          <label>Пароль</label>{{ form.password }}
-          {% if form.password.errors %}<div style="color:var(--status-noshow); font-size:13px;">{{ form.password.errors|striptags }}</div>{% endif %}
-        </div>
-        <button class="btn primary" type="submit" style="width:100%; justify-content:center;">Создать аккаунт</button>
-      </form>
-    </div>
+      </div>
+    {% empty %}
+      <div class="empty" style="padding:40px;"><div class="big">Пока нет сотрудников</div>Нажмите «Новый аккаунт».</div>
+    {% endfor %}
   </div>
+
+  {# Создание — в модалке, чтобы список не кривился #}
+  <dialog id="new-account" class="modal">
+    <form method="post">
+      {% csrf_token %}
+      <h3 style="margin-top:0;">Новый аккаунт</h3>
+      <div class="field">
+        <label>Логин</label>{{ form.username }}
+        {% if form.username.errors %}<div class="err">{{ form.username.errors|striptags }}</div>{% endif %}
+      </div>
+      <div class="field"><label>Имя</label>{{ form.full_name }}</div>
+      <div class="field">
+        <label>Роль-пресет <span class="muted" style="font-weight:400;">(стартовый набор галочек, потом правится в «Доступ»)</span></label>{{ form.role }}
+        {% if form.role.errors %}<div class="err">{{ form.role.errors|striptags }}</div>{% endif %}
+      </div>
+      <div class="field">
+        <label>Пароль</label>{{ form.password }}
+        {% if form.password.errors %}<div class="err">{{ form.password.errors|striptags }}</div>{% endif %}
+      </div>
+      <div style="display:flex; gap:10px; margin-top:8px;">
+        <button class="btn" type="button" onclick="document.getElementById('new-account').close()">Отмена</button>
+        <button class="btn primary" type="submit" style="flex:1; justify-content:center;">Создать</button>
+      </div>
+    </form>
+  </dialog>
 {% endblock %}

@@ -36,7 +36,8 @@ register_module(Module("appointments", "Записи и журнал", is_core=T
                        url_prefix="", urlconf="appointments.urls"))
 register_module(Module("clients", "Клиенты", is_core=True, order=20,
                        url_prefix="", urlconf="clients.urls"))
-register_module(Module("staff", "Сотрудники и график", is_core=True, order=30))
+register_module(Module("staff", "Сотрудники и график", is_core=True, order=30,
+                       url_prefix="", urlconf="staff.urls"))
 register_module(Module("notifications", "Уведомления", is_core=True, order=40))
 register_module(Module("dashboard", "Дашборд", is_core=True, order=50))
 register_module(Module("data_health", "Здоровье данных", is_core=True, order=60))

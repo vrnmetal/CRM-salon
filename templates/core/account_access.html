@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Доступ · {{ account.first_name|default:account.username }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'accounts' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">Доступ · {{ account.first_name|default:account.username }}</h1>
+      <div class="muted" style="font-size:14px; margin-top:4px;">Галочки этого конкретного аккаунта. Роль — лишь заготовка, здесь всё правится индивидуально.</div>
+    </div>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+
+    {# Быстро применить пресет роли (перезапишет галочки ниже) #}
+    <div class="card" style="margin-bottom:16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <span class="muted" style="font-size:14px;">Применить пресет:</span>
+      {% for r in roles %}
+        <button class="btn" type="submit" formaction="{% url 'account_apply_preset' account.id %}" name="role" value="{{ r.id }}">{{ r.name }}</button>
+      {% endfor %}
+      <span class="muted" style="font-size:13px; margin-left:auto;">перезапишет текущие галочки</span>
+    </div>
+
+    {% for section, perms in sections %}
+      <div class="card perm-section">
+        <h3>{{ section }}</h3>
+        {% for p in perms %}
+          <label class="perm-row" style="cursor:pointer;">
+            <input type="checkbox" name="perms" value="{{ p.code }}" style="width:auto;"
+                   {% if p.granted %}checked{% endif %}
+                   {% if is_self and p.code == 'access.manage' %}onclick="return false" title="Нельзя снять у себя"{% endif %}>
+            <span>{{ p.label }}</span>
+            <span class="code">{{ p.code }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    {% endfor %}
+
+    <button class="btn primary" type="submit">Сохранить доступ аккаунта</button>
+  </form>
+{% endblock %}

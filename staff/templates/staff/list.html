@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Сотрудники · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head"><h1 class="display">Сотрудники</h1></div>
+
+  <div class="grid cols-2" style="align-items:start;">
+    <div class="card" style="padding:4px 22px;">
+      {% for e in employees %}
+        <div class="row">
+          <span style="width:10px; height:10px; border-radius:50%; background:{{ e.color|default:'#0071E3' }};"></span>
+          <div class="main">
+            <div class="title">{{ e.full_name }}</div>
+            {% if e.specialization %}<div class="sub">{{ e.specialization }}</div>{% endif %}
+          </div>
+          {% if not e.is_active %}<span class="muted" style="font-size:13px;">скрыт</span>{% endif %}
+        </div>
+      {% empty %}
+        <div class="empty"><div class="big">Сотрудников нет</div>Добавьте первого справа.</div>
+      {% endfor %}
+    </div>
+
+    {% if request.user|can:"staff.create" %}
+    <div class="card">
+      <h3>Новый сотрудник</h3>
+      <form method="post">
+        {% csrf_token %}
+        <div class="field"><label>Имя</label><input type="text" name="full_name" required></div>
+        <div class="field"><label>Специализация</label><input type="text" name="specialization" placeholder="Парикмахер, мастер маникюра…"></div>
+        <div class="field"><label>Цвет в журнале</label><input type="color" name="color" value="#0071E3"></div>
+        <button class="btn primary" type="submit" style="width:100%; justify-content:center;">Добавить</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+{% endblock %}

@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from core.forms import AccountCreateForm, BrandingForm
-from core.models import User
+from core.models import Role, User
 from core.permissions import REGISTRY, has_perm, requires, requires_any
 
 
@@ -36,24 +36,47 @@ def dashboard(request):
     return render(request, "core/dashboard.html")
 
 
-# --- Настройки доступа: UI строится АВТОМАТИЧЕСКИ из реестра прав ---
+# --- Настройки доступа: РЕДАКТИРУЕМЫЕ галочки прав по ролям ---
+# UI строится из реестра прав; собственник отмечает, что можно делать каждой роли.
 @login_required
 @requires("access.manage")
 def access_settings(request):
-    # Группируем права по разделам для читаемого интерфейса (гранулярность — в движке,
-    # простота — в UI). Отмечаем, какие есть у роли текущего пользователя.
-    role = getattr(request.user, "role", None)
-    current_codes = set(role.permission_codes or []) if role else set()
+    from django.urls import reverse
 
+    roles = list(Role.objects.filter(tenant=request.tenant).order_by("name"))
+
+    # Какую роль редактируем: из параметра, иначе роль текущего пользователя, иначе первая
+    rid = request.POST.get("role") if request.method == "POST" else request.GET.get("role")
+    role = next((r for r in roles if str(r.id) == str(rid)), None)
+    if role is None:
+        role = request.user.role if request.user.role in roles else (roles[0] if roles else None)
+
+    # Провайдерские права не редактируются на уровне тенанта
+    editable = {code: p for code, p in REGISTRY.items() if p.module != "provider"}
+
+    if request.method == "POST" and role is not None:
+        checked = set(request.POST.getlist("perms")) & set(editable.keys())
+        # Защита: нельзя снять «Настраивать доступы» со СВОЕЙ роли (иначе самоблок)
+        if role.id == getattr(request.user.role, "id", None):
+            checked.add("access.manage")
+        role.permission_codes = sorted(checked)
+        role.save(update_fields=["permission_codes"])
+        messages.success(request, f"Права роли «{role.name}» сохранены.")
+        return redirect(reverse("access_settings") + f"?role={role.id}")
+
+    current = set(role.permission_codes or []) if role else set()
     sections = {}
-    for perm in REGISTRY.values():
-        sections.setdefault(perm.section, []).append(
-            {"code": perm.code, "label": perm.label, "granted": perm.code in current_codes}
+    for p in editable.values():
+        sections.setdefault(p.section, []).append(
+            {"code": p.code, "label": p.label, "granted": p.code in current}
         )
 
     context = {
+        "roles": roles,
+        "role": role,
         "sections": sorted(sections.items()),
-        "role_name": role.name if role else "—",
+        # Своя роль — предупредим, что access.manage заблокирован к снятию
+        "is_own_role": role is not None and role.id == getattr(request.user.role, "id", None),
     }
     return render(request, "core/access_settings.html", context)
 
@@ -77,12 +100,14 @@ def accounts(request):
         form = AccountCreateForm(request.POST, tenant=request.tenant)
         if form.is_valid():
             cd = form.cleaned_data
-            # Создаём сотрудника в текущем тенанте с выбранной ролью
+            role = cd["role"]
+            # Создаём сотрудника; права КОПИРУЕМ из пресета роли на сам аккаунт
             user = User(
                 username=cd["username"],
                 first_name=cd["full_name"].strip(),
                 tenant=request.tenant,
-                role=cd["role"],
+                role=role,
+                permission_codes=list(role.permission_codes or []),
             )
             user.set_password(cd["password"])
             user.save()
@@ -91,9 +116,63 @@ def accounts(request):
     else:
         form = AccountCreateForm(tenant=request.tenant)
 
-    # Сотрудники тенанта (без провайдерских админов)
+    # Сотрудники тенанта (без провайдерских админов) + роли-пресеты
     staff = User.objects.filter(tenant=request.tenant, is_provider_admin=False).order_by("username")
-    return render(request, "core/accounts.html", {"form": form, "staff": staff})
+    roles = Role.objects.filter(tenant=request.tenant).order_by("name")
+    return render(request, "core/accounts.html", {"form": form, "staff": staff, "roles": roles})
+
+
+# --- Применить пресет роли к аккаунту (копирует галочки роли в права аккаунта) ---
+@login_required
+@requires("account.manage")
+@require_POST
+def account_apply_preset(request, pk):
+    user = get_object_or_404(User, pk=pk, tenant=request.tenant)
+    role = Role.objects.filter(tenant=request.tenant, pk=request.POST.get("role")).first()
+    if role is None:
+        messages.error(request, "Роль не найдена.")
+        return redirect("accounts")
+    user.role = role
+    user.permission_codes = list(role.permission_codes or [])
+    # Защита: нельзя лишить себя доступа к настройкам
+    if user.id == request.user.id and "access.manage" not in user.permission_codes:
+        user.permission_codes.append("access.manage")
+    user.save(update_fields=["role", "permission_codes"])
+    messages.success(request, f"Пресет «{role.name}» применён к {user.username}.")
+    return redirect("accounts")
+
+
+# --- Персональная настройка доступа КОНКРЕТНОГО аккаунта (галочки прав) ---
+@login_required
+@requires("account.manage")
+def account_access(request, pk):
+    user = get_object_or_404(User, pk=pk, tenant=request.tenant)
+    # Провайдерские права не редактируются на уровне тенанта
+    editable = {code: p for code, p in REGISTRY.items() if p.module != "provider"}
+
+    if request.method == "POST":
+        checked = set(request.POST.getlist("perms")) & set(editable.keys())
+        # Нельзя снять «Настраивать доступы» с самого себя
+        if user.id == request.user.id:
+            checked.add("access.manage")
+        user.permission_codes = sorted(checked)
+        user.save(update_fields=["permission_codes"])
+        messages.success(request, f"Доступ аккаунта {user.username} сохранён.")
+        return redirect("accounts")
+
+    current = set(user.permission_codes or [])
+    sections = {}
+    for p in editable.values():
+        sections.setdefault(p.section, []).append(
+            {"code": p.code, "label": p.label, "granted": p.code in current}
+        )
+    context = {
+        "account": user,
+        "sections": sorted(sections.items()),
+        "is_self": user.id == request.user.id,
+        "roles": Role.objects.filter(tenant=request.tenant).order_by("name"),
+    }
+    return render(request, "core/account_access.html", context)
 
 
 # --- Удаление аккаунта (нельзя удалить себя) ---

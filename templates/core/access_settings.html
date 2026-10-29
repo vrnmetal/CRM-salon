@@ -1,34 +1,50 @@
 {% extends "base.html" %}
 {% load core_extras %}
-{% block title %}Настройки доступа · {{ brand.name }}{% endblock %}
+{% block title %}Доступы · {{ brand.name }}{% endblock %}
 
 {% block content %}
   <div class="page-head">
     <div>
       <a class="back" href="{% url 'settings_home' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
-      <h1 class="display" style="margin:0;">Настройки доступа</h1>
+      <h1 class="display" style="margin:0;">Пресеты ролей</h1>
+      <div class="muted" style="font-size:14px; margin-top:4px;">Заготовки галочек. Права конкретного человека настраиваются в «Аккаунты → Доступ».</div>
     </div>
   </div>
 
+  {# Переключатель роли — какой роли настраиваем права #}
   <div class="card" style="margin-bottom:16px;">
-    Права и роли строятся автоматически из реестра: каждое действие в системе
-    регистрирует своё право и само появляется здесь. {% hint "access.presets" %}
-    <div style="color:var(--text-muted); margin-top:8px;">
-      Показаны права текущей роли: <b>{{ role_name }}</b>. Редактирование ролей и пресетов — на следующем шаге.
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <span class="muted" style="font-size:14px; margin-right:4px;">Роль:</span>
+      {% for r in roles %}
+        <a class="btn {% if r.id == role.id %}primary{% endif %}" href="?role={{ r.id }}" style="padding:7px 14px;">{{ r.name }}</a>
+      {% endfor %}
+      {% hint "access.presets" %}
     </div>
   </div>
 
-  {# Авто-генерация из реестра прав, сгруппированная по разделам (просто в UI). #}
-  {% for section, perms in sections %}
-    <div class="card perm-section">
-      <h3>{{ section }}</h3>
-      {% for p in perms %}
-        <div class="perm-row">
-          <span class="pdot {% if p.granted %}on{% endif %}"></span>
-          <span>{{ p.label }}</span>
-          <span class="code">{{ p.code }}</span>
-        </div>
-      {% endfor %}
-    </div>
-  {% endfor %}
+  {% if role %}
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="role" value="{{ role.id }}">
+
+    {% for section, perms in sections %}
+      <div class="card perm-section">
+        <h3>{{ section }}</h3>
+        {% for p in perms %}
+          <label class="perm-row" style="cursor:pointer;">
+            <input type="checkbox" name="perms" value="{{ p.code }}" style="width:auto;"
+                   {% if p.granted %}checked{% endif %}
+                   {% if is_own_role and p.code == 'access.manage' %}onclick="return false" title="Нельзя снять у своей роли"{% endif %}>
+            <span>{{ p.label }}</span>
+            <span class="code">{{ p.code }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    {% endfor %}
+
+    <button class="btn primary" type="submit">Сохранить права роли «{{ role.name }}»</button>
+  </form>
+  {% else %}
+    <div class="card"><div class="empty"><div class="big">Нет ролей</div>Создайте роли, назначив их аккаунтам.</div></div>
+  {% endif %}
 {% endblock %}

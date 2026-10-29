@@ -10,7 +10,7 @@ from datetime import datetime, time, timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from appointments.models import Appointment, Service, ServiceCategory
+from appointments.models import Appointment, AppointmentService, Service, ServiceCategory
 from clients.models import Client
 from core.models import Role, Tenant, User
 from core.permissions import role_presets
@@ -59,6 +59,8 @@ class Command(BaseCommand):
             )
             user.tenant = tenant
             user.role = roles[role_code]
+            # Права КОПИРУЕМ из пресета роли на аккаунт (роль — лишь заготовка галочек)
+            user.permission_codes = list(roles[role_code].permission_codes or [])
             user.set_password("demo12345")
             user.save()
             self.stdout.write(f"  пользователь {username} / demo12345 ({roles[role_code].name})")
@@ -123,9 +125,10 @@ class Command(BaseCommand):
             for cname, mname, sname, t, status in plan:
                 svc = services[sname]
                 start = timezone.make_aware(datetime.combine(today, t))
-                Appointment.objects.create(
+                appt = Appointment.objects.create(
                     client=clients[cname], employee=employees[mname], service=svc,
                     start=start, duration_min=svc.duration_min, price=svc.price,
                     status=status, pdn_consent=True,
                 )
+                AppointmentService.objects.create(appointment=appt, service=svc, price=svc.price)
             self.stdout.write("  записей на сегодня: 3")
