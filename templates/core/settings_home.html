@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Настройки · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <h1 class="display">Настройки</h1>
+  </div>
+
+  <div class="grid cols-2">
+    {% if request.user|can:"access.manage" %}
+      <a class="card" href="{% url 'access_settings' %}" style="text-decoration:none; color:inherit;">
+        <h3>Доступы</h3>
+        <div class="muted" style="font-size:14px;">Роли и права сотрудников. Кто что может делать.</div>
+      </a>
+    {% endif %}
+    {% if request.user|can:"account.manage" %}
+      <a class="card" href="{% url 'accounts' %}" style="text-decoration:none; color:inherit;">
+        <h3>Аккаунты</h3>
+        <div class="muted" style="font-size:14px;">Создание и удаление учётных записей сотрудников.</div>
+      </a>
+    {% endif %}
+    {% if request.user|can:"branding.manage" %}
+      <a class="card" href="{% url 'branding_settings' %}" style="text-decoration:none; color:inherit;">
+        <h3>Брендирование</h3>
+        <div class="muted" style="font-size:14px;">Название, акцентный цвет, шрифт и логотип салона.</div>
+      </a>
+    {% endif %}
+  </div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Настройки доступа · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'settings_home' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">Настройки доступа</h1>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    Права и роли строятся автоматически из реестра: каждое действие в системе
+    регистрирует своё право и само появляется здесь. {% hint "access.presets" %}
+    <div style="color:var(--text-muted); margin-top:8px;">
+      Показаны права текущей роли: <b>{{ role_name }}</b>. Редактирование ролей и пресетов — на следующем шаге.
+    </div>
+  </div>
+
+  {# Авто-генерация из реестра прав, сгруппированная по разделам (просто в UI). #}
+  {% for section, perms in sections %}
+    <div class="card perm-section">
+      <h3>{{ section }}</h3>
+      {% for p in perms %}
+        <div class="perm-row">
+          <span class="pdot {% if p.granted %}on{% endif %}"></span>
+          <span>{{ p.label }}</span>
+          <span class="code">{{ p.code }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+{% endblock %}

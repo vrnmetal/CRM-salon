@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Аккаунты · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'settings_home' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">Аккаунты</h1>
+    </div>
+  </div>
+
+  <div class="grid cols-2" style="align-items:start;">
+    {# Список сотрудников #}
+    <div class="card" style="padding:4px 22px;">
+      {% for u in staff %}
+        <div class="row">
+          <div class="main">
+            <div class="title">{{ u.first_name|default:u.username }}</div>
+            <div class="sub">{{ u.username }}{% if u.role %} · {{ u.role.name }}{% endif %}</div>
+          </div>
+          {% if u.id != request.user.id %}
+            <form method="post" action="{% url 'account_delete' u.id %}" onsubmit="return confirm('Удалить аккаунт {{ u.username }}?');">
+              {% csrf_token %}
+              <button class="btn" type="submit" style="padding:6px 12px; color:var(--status-noshow);">Удалить</button>
+            </form>
+          {% else %}
+            <span class="muted" style="font-size:13px;">вы</span>
+          {% endif %}
+        </div>
+      {% empty %}
+        <div class="empty"><div class="big">Пока нет сотрудников</div>Создайте первый аккаунт справа.</div>
+      {% endfor %}
+    </div>
+
+    {# Форма создания #}
+    <div class="card">
+      <h3>Новый аккаунт</h3>
+      <form method="post">
+        {% csrf_token %}
+        <div class="field">
+          <label>Логин</label>{{ form.username }}
+          {% if form.username.errors %}<div style="color:var(--status-noshow); font-size:13px;">{{ form.username.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="field"><label>Имя</label>{{ form.full_name }}</div>
+        <div class="field">
+          <label>Роль</label>{{ form.role }}
+          {% if form.role.errors %}<div style="color:var(--status-noshow); font-size:13px;">{{ form.role.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="field">
+          <label>Пароль</label>{{ form.password }}
+          {% if form.password.errors %}<div style="color:var(--status-noshow); font-size:13px;">{{ form.password.errors|striptags }}</div>{% endif %}
+        </div>
+        <button class="btn primary" type="submit" style="width:100%; justify-content:center;">Создать аккаунт</button>
+      </form>
+    </div>
+  </div>
+{% endblock %}

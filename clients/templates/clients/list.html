@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Клиенты · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <h1 class="display">Клиенты</h1>
+    <span class="muted" style="font-size:14px;">{{ total }}</span>
+  </div>
+
+  <form method="get" style="margin-bottom:16px; max-width:360px;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Поиск по имени или телефону">
+  </form>
+
+  <div class="card" style="padding:4px 22px;">
+    {% for r in rows %}
+      <a href="{% url 'client_detail' r.c.id %}" class="row" style="text-decoration:none; color:inherit;">
+        <div class="main">
+          <div class="title">{{ r.c.full_name }}</div>
+          {% if request.user|can:"client.phone.view" %}
+            <div class="sub tnum">{{ r.c.phone }}</div>
+          {% endif %}
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:14px;">{{ r.visits }} виз.</div>
+          <div class="sub">
+            <span class="status-badge {{ r.status }}">{{ r.status_label }}</span>
+            {% if r.last %} · {{ r.last|date:"j M Y" }}{% endif %}
+          </div>
+        </div>
+      </a>
+    {% empty %}
+      <div class="empty"><div class="big">Клиентов пока нет</div>Они появятся после первых записей.</div>
+    {% endfor %}
+  </div>
+{% endblock %}

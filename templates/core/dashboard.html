@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Дашборд · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <div class="sub">{% now "l, j E" %}</div>
+      <h1 class="display" style="margin:2px 0 0;">Доброе утро{% if user.first_name %}, {{ user.first_name }}{% endif %}</h1>
+    </div>
+  </div>
+
+  {# Zero-click: метрики сразу в лицо. Пока заглушки — подключим данные с модулями. #}
+  <div class="grid auto" style="margin-bottom:16px;">
+    <div class="tile">
+      <div class="label">Выручка · этот месяц {% hint "appointment.quick" %}</div>
+      <div class="value">— ₽</div>
+    </div>
+    <div class="tile">
+      <div class="label">Повторные визиты</div>
+      <div class="value">—%</div>
+    </div>
+    <div class="tile">
+      <div class="label">Средний чек</div>
+      <div class="value">— ₽</div>
+    </div>
+    <div class="tile">
+      <div class="label">Загрузка мастеров</div>
+      <div class="value">—%</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="empty">
+      <div class="big">Здесь будет дашборд-советник</div>
+      Метрики и подсказки с действием — «вернуть спящих», «заполнить окна», с эффектом
+      в рублях — появятся, когда подключим записи и клиентов. Это следующий шаг.
+    </div>
+  </div>
+{% endblock %}

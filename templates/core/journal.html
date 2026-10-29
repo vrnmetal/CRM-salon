@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Журнал · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <h1 class="display">Журнал</h1>
+    {% if request.user|can:"appointment.create" %}
+      <button class="btn primary">Быстрая запись</button>
+    {% endif %}
+  </div>
+
+  {# Легенда статусов визита — точками, сдержанно (кормит метрику неявок). #}
+  <div class="card legend" style="margin-bottom:16px;">
+    <span><i class="dot wait"></i> Ожидание</span>
+    <span><i class="dot confirmed"></i> Подтвердил</span>
+    <span><i class="dot came"></i> Пришёл</span>
+    <span><i class="dot noshow"></i> Не пришёл</span>
+  </div>
+
+  <div class="card">
+    <div class="empty">
+      <div class="big">Журнал записей</div>
+      Сетка по мастерам и быстрая запись в три поля — на следующем шаге. Каркас
+      (мультитенант, права, подсказки, дизайн) уже под этим.
+    </div>
+  </div>
+{% endblock %}

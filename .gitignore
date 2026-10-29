@@ -1,0 +1,15 @@
+# Окружение и секреты
+.env
+.venv/
+*.pyc
+__pycache__/
+
+# Django
+db.sqlite3
+/media/
+/staticfiles/
+
+# IDE/ОС
+.idea/
+.vscode/
+.DS_Store

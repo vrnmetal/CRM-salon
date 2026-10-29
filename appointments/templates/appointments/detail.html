@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Запись · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'journal' %}?date={{ a.start|date:'Y-m-d' }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">Запись</h1>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:520px;">
+    {# Статус и время #}
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
+      <span class="dot {{ a.status }}"></span>
+      <span style="font-weight:500;">{{ a.get_status_display }}</span>
+      <span class="muted" style="margin-left:auto;">{{ a.start|date:"j E, H:i" }} · {{ a.duration_min }} мин</span>
+    </div>
+
+    <table style="width:100%; font-size:14px;">
+      <tr><td style="color:var(--text-muted); padding:7px 0;">Клиент</td>
+          <td style="text-align:right;"><a href="{% url 'client_detail' a.client.id %}">{{ a.client.full_name }}</a></td></tr>
+      {% if request.user|can:"client.phone.view" %}
+        <tr><td style="color:var(--text-muted); padding:7px 0;">Телефон</td>
+            <td style="text-align:right;" class="tnum">{{ a.client.phone }}</td></tr>
+      {% endif %}
+      <tr><td style="color:var(--text-muted); padding:7px 0;">Мастер</td>
+          <td style="text-align:right;">{{ a.employee.full_name }}</td></tr>
+      <tr><td style="color:var(--text-muted); padding:7px 0;">Услуга</td>
+          <td style="text-align:right;">{% if a.service %}{{ a.service.name }}{% else %}—{% endif %}</td></tr>
+      <tr><td style="color:var(--text-muted); padding:7px 0;">Стоимость</td>
+          <td style="text-align:right;" class="tnum">{{ a.price|floatformat:0 }} ₽</td></tr>
+      {% if a.comment %}
+        <tr><td style="color:var(--text-muted); padding:7px 0; vertical-align:top;">Комментарий</td>
+            <td style="text-align:right;">{{ a.comment }}</td></tr>
+      {% endif %}
+    </table>
+  </div>
+{% endblock %}

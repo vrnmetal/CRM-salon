@@ -1,0 +1,105 @@
+{% load static core_extras %}<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ brand.name|default:"Салон" }}{% endblock %}</title>
+
+  {# Единый дизайн-файл. ?v — поднимать при каждой правке app.css (кэш). #}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=4">
+
+  {# White-label: переопределяем акцент тенанта ПОСЛЕ app.css (каскад побеждает). #}
+  {% if brand.accent %}
+  <style>:root { --accent: {{ brand.accent }}; }</style>
+  {% endif %}
+  {# White-label: шрифт-пресет тенанта (переопределяет базовый системный). #}
+  {% if brand.font %}
+  <style>:root { --font-sans: {{ brand.font }}; }</style>
+  {% endif %}
+</head>
+<body>
+<div class="layout">
+
+  {# --- Левый сайдбар: бренд салона + навигация по правам --- #}
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">
+        {% if brand.logo_url %}<img src="{{ brand.logo_url }}" alt="">{% else %}{{ brand.name|first|default:"S" }}{% endif %}
+      </div>
+      <div class="name">{{ brand.name|default:"Салон" }}</div>
+    </div>
+
+    <nav class="nav">
+      {% if request.user|can:"dashboard.view" %}
+        <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+          Дашборд</a>
+      {% endif %}
+      {% if request.user|can:"appointment.view" %}
+        <a href="{% url 'journal' %}" class="{% if request.resolver_match.url_name == 'journal' %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2.5v3M16 2.5v3"/></svg>
+          Журнал</a>
+      {% endif %}
+      {% if request.user|can:"client.view" %}
+        <a href="{% url 'client_list' %}" class="{% if request.resolver_match.url_name == 'client_list' or request.resolver_match.url_name == 'client_detail' %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0M16 5.5a3 3 0 0 1 0 5.5M17.5 20a5 5 0 0 0-3-4.6"/></svg>
+          Клиенты</a>
+      {% endif %}
+    </nav>
+
+    <div class="spacer"></div>
+
+    {# Настройки — внизу сайдбара (как в сервисной CRM), отдельно от основного меню #}
+    {% if request.user|can:"access.manage" or request.user|can:"account.manage" or request.user|can:"branding.manage" %}
+      <nav class="nav">
+        <a href="{% url 'settings_home' %}" class="{% if request.resolver_match.url_name == 'settings_home' or request.resolver_match.url_name == 'access_settings' or request.resolver_match.url_name == 'accounts' or request.resolver_match.url_name == 'branding_settings' %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.5M12 19v2.5M4.2 7l2.1 1.2M17.7 15.8l2.1 1.2M4.2 17l2.1-1.2M17.7 8.2l2.1-1.2"/></svg>
+          Настройки</a>
+      </nav>
+    {% endif %}
+
+    <div class="foot">
+      {% if user.is_authenticated %}
+        {{ user.username }}{% if user.role %} · {{ user.role.name }}{% endif %}<br>
+        {# Тумблер подсказок в профиле пользователя #}
+        <form method="post" action="{% url 'toggle_hints' %}">
+          {% csrf_token %}
+          <button class="link" type="submit">Подсказки: {% if show_hints %}вкл{% else %}выкл{% endif %}</button>
+        </form>
+        · <a href="{% url 'logout' %}">Выйти</a>
+      {% endif %}
+    </div>
+  </aside>
+
+  {# --- Контент страницы --- #}
+  <main class="content">
+    {% if messages %}
+      <div style="margin-bottom:18px;">
+        {% for m in messages %}
+          <div class="toast {{ m.tags }}">{{ m }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+</div>
+
+{# Долгий тап показывает подсказку на тач-устройствах (где нет hover). #}
+<script>
+document.addEventListener('touchstart', function (e) {
+  var h = e.target.closest('.hint');
+  if (h && h.dataset.hint) { alert(h.dataset.hint); }
+}, { passive: true });
+
+// Поля даты/времени: открывать нативный пикер при клике в ЛЮБОЕ место поля,
+// а не только по иконке. showPicker() вызывается в обработчике клика (жест пользователя).
+document.addEventListener('click', function (e) {
+  var el = e.target;
+  if (el.tagName === 'INPUT' && (el.type === 'date' || el.type === 'time')) {
+    try { el.showPicker(); } catch (err) { /* не поддерживается — обычное поведение */ }
+  }
+});
+</script>
+</body>
+</html>

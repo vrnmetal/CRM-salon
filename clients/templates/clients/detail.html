@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}{{ client.full_name }} · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'client_list' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">{{ client.full_name }}</h1>
+      <div class="sub" style="margin-top:4px;">
+        <span class="status-badge {{ status }}">{{ status_label }}</span>
+        {% if request.user|can:"client.phone.view" %}<span class="tnum" style="margin-left:8px;">{{ client.phone }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# --- Профиль-сводка: zero-click, до ленты визитов --- #}
+  <div class="grid auto" style="margin-bottom:14px;">
+    <div class="tile"><div class="label">Визитов</div><div class="value">{{ visits }}</div></div>
+    <div class="tile"><div class="label">Потратил всего</div><div class="value tnum">{{ ltv }} ₽</div></div>
+    <div class="tile"><div class="label">Средний чек</div><div class="value tnum">{{ avg_check }} ₽</div></div>
+    <div class="tile">
+      <div class="label">Последний визит</div>
+      <div class="value" style="font-size:20px;">{% if last_dt %}{{ last_dt|date:"j M" }}{% else %}—{% endif %}</div>
+    </div>
+  </div>
+
+  {% if tags or favorite %}
+  <div class="card" style="margin-bottom:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+    {% for name, n in tags %}<span class="tag">{{ name }}<span class="n">×{{ n }}</span></span>{% endfor %}
+    {% if favorite %}<span class="muted" style="margin-left:auto; font-size:13px;">Любимый мастер: <b style="color:var(--text);">{{ favorite }}</b></span>{% endif %}
+  </div>
+  {% endif %}
+
+  {# --- Лента визитов (детали ниже сводки) --- #}
+  <div class="card" style="padding:4px 22px;">
+    {% for a in appts %}
+      <a href="{% url 'appointment_detail' a.id %}" class="row" style="text-decoration:none; color:inherit;">
+        <div class="time">{{ a.start|date:"H:i" }}</div>
+        <span class="dot {{ a.status }}" style="margin-top:7px;"></span>
+        <div class="main">
+          <div class="title">{% if a.service %}{{ a.service.name }}{% else %}—{% endif %}</div>
+          <div class="sub">{{ a.start|date:"j M Y" }} · {{ a.employee.full_name }} · {{ a.get_status_display }}</div>
+        </div>
+        <div class="amount tnum">{{ a.price|floatformat:0 }} ₽</div>
+      </a>
+    {% empty %}
+      <div class="empty"><div class="big">Визитов пока нет</div>История появится после первой записи.</div>
+    {% endfor %}
+  </div>
+{% endblock %}

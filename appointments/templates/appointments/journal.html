@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Журнал · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div style="display:flex; align-items:center; gap:14px;">
+      <h1 class="display" style="margin:0;">Журнал</h1>
+      <div style="display:flex; align-items:center; gap:4px;">
+        <a class="btn" href="?date={{ prev_day }}" style="padding:7px 11px;">‹</a>
+        <a class="btn" href="?date={{ today }}" style="padding:7px 12px;">Сегодня</a>
+        <a class="btn" href="?date={{ next_day }}" style="padding:7px 11px;">›</a>
+      </div>
+      <span class="muted" style="font-size:14px;">{{ day|date:"l, j E" }} · {{ total }} зап.</span>
+    </div>
+    {% if request.user|can:"appointment.create" %}
+      <a class="btn primary" href="{% url 'appointment_add' %}?date={{ day|date:'Y-m-d' }}">Быстрая запись</a>
+    {% endif %}
+  </div>
+
+  {% if columns %}
+    {# Временная сетка: час = фиксированная высота, запись стоит на своём месте,
+       промежуток между записями виден как пустое пространство (без подсчётов). #}
+    <div id="journal" style="display:flex; gap:12px; overflow-x:auto; padding-bottom:6px; position:relative;"
+         data-start="{{ hours.0.label|slice:':2' }}" data-hourpx="{{ hour_px }}" data-header="52" data-height="{{ grid_height }}">
+
+      {# Подсветка временной линии при наведении мыши (следует за курсором) #}
+      <div id="hline" style="position:absolute; left:0; right:0; border-top:1px dashed var(--accent); display:none; pointer-events:none; z-index:5;"></div>
+      <div id="htime" class="tnum" style="position:absolute; left:0; display:none; pointer-events:none; z-index:6; background:var(--accent); color:#fff; font-size:11px; padding:1px 6px; border-radius:6px; transform:translateY(-50%);"></div>
+
+
+      {# Линейка времени слева #}
+      <div style="flex-shrink:0; width:50px;">
+        <div style="height:52px;"></div>{# отступ под шапки колонок #}
+        <div style="position:relative; height:{{ grid_height }}px;">
+          {% for h in hours %}
+            <div class="tnum" style="position:absolute; top:{{ h.top }}px; right:0; transform:translateY(-50%); font-size:12px; color:var(--text-soft);">{{ h.label }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# Колонки-мастера #}
+      {% for col in columns %}
+        <div style="min-width:220px; flex:1;">
+          {# Шапка колонки фиксированной высоты (чтобы сетки совпадали) #}
+          <div style="height:52px; display:flex; align-items:center; gap:9px;">
+            <span style="width:9px; height:9px; border-radius:50%; background:{{ col.employee.color|default:'#0071E3' }};"></span>
+            <div style="line-height:1.15;">
+              <div style="font-weight:600; letter-spacing:-0.01em;">{{ col.employee.full_name }}</div>
+              {% if col.employee.specialization %}<div style="font-size:12px; color:var(--text-soft);">{{ col.employee.specialization }}</div>{% endif %}
+            </div>
+          </div>
+
+          {# Тело колонки с часовыми линиями и блоками записей #}
+          <div class="card" style="position:relative; height:{{ grid_height }}px; padding:0; overflow:hidden;">
+            {% for h in hours %}
+              <div style="position:absolute; top:{{ h.top }}px; left:0; right:0; border-top:1px solid var(--border);"></div>
+            {% endfor %}
+
+            {% for b in col.blocks %}
+              <a href="{% url 'appointment_detail' b.appt.id %}"
+                 style="position:absolute; top:{{ b.top }}px; height:{{ b.height }}px; left:6px; right:6px;
+                        background:color-mix(in srgb, {{ col.employee.color|default:'#0071E3' }} 10%, #fff);
+                        border-left:3px solid {{ col.employee.color|default:'#0071E3' }};
+                        border-radius:8px; padding:6px 10px; overflow:hidden; text-decoration:none;">
+                <div style="display:flex; justify-content:space-between; gap:6px;">
+                  <span class="tnum" style="font-size:12px; color:var(--text-muted);">{{ b.appt.start|time:"H:i" }}–{{ b.end|time:"H:i" }}</span>
+                  <span class="dot {{ b.appt.status }}" style="margin-top:4px;"></span>
+                </div>
+                <div style="font-size:14px; color:var(--text); font-weight:500;">{{ b.appt.client.full_name }}</div>
+                {% if b.appt.service %}<div style="font-size:12px; color:var(--text-soft);">{{ b.appt.service.name }}</div>{% endif %}
+              </a>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card">
+      <div class="empty">
+        <div class="big">Пока нет мастеров</div>
+        Добавьте сотрудников — и журнал оживёт. Раздел «Сотрудники» в админке
+        (<code>/django-admin/</code>).
+      </div>
+    </div>
+  {% endif %}
+
+  {# Подсветка временной линии: следит за курсором внутри сетки, показывает время #}
+  <script>
+  (function () {
+    var grid = document.getElementById('journal');
+    if (!grid) return;
+    var line = document.getElementById('hline');
+    var bubble = document.getElementById('htime');
+    var startHour = parseInt(grid.dataset.start, 10);
+    var hourPx = parseInt(grid.dataset.hourpx, 10);
+    var headerPx = parseInt(grid.dataset.header, 10);
+    var heightPx = parseInt(grid.dataset.height, 10);
+
+    grid.addEventListener('mousemove', function (e) {
+      var rect = grid.getBoundingClientRect();
+      // y относительно содержимого сетки (с учётом вертикального скролла страницы нет,
+      // но горизонтальный скролл не влияет на y)
+      var y = e.clientY - rect.top;
+      // Активная зона — только тело колонок (под шапками)
+      if (y < headerPx || y > headerPx + heightPx) { line.style.display = 'none'; bubble.style.display = 'none'; return; }
+      line.style.top = y + 'px'; line.style.display = 'block';
+      // Время по позиции
+      var mins = (y - headerPx) / hourPx * 60;
+      var hh = startHour + Math.floor(mins / 60);
+      var mm = Math.floor(mins % 60);
+      bubble.textContent = ('0' + hh).slice(-2) + ':' + ('0' + mm).slice(-2);
+      bubble.style.top = y + 'px'; bubble.style.left = (grid.scrollLeft) + 'px'; bubble.style.display = 'block';
+    });
+    grid.addEventListener('mouseleave', function () { line.style.display = 'none'; bubble.style.display = 'none'; });
+  })();
+  </script>
+{% endblock %}

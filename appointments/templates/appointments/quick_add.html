@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Быстрая запись · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'journal' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">Быстрая запись {% hint "appointment.quick" %}</h1>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:520px;">
+    <form method="post">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <p style="color:var(--status-noshow);">{{ form.non_field_errors }}</p>
+      {% endif %}
+
+      {# Главное: кто, на что, когда #}
+      <div class="field">
+        <label>Мастер</label>
+        {{ form.employee }}
+        {% if form.employee.errors %}<div style="color:var(--status-noshow); font-size:13px;">{{ form.employee.errors|striptags }}</div>{% endif %}
+      </div>
+
+      <div class="field">
+        <label>Услуга</label>
+        {{ form.service }}
+        {% if form.service.errors %}<div style="color:var(--status-noshow); font-size:13px;">{{ form.service.errors|striptags }}</div>{% endif %}
+      </div>
+
+      <div style="display:flex; gap:12px;">
+        <div class="field" style="flex:1;">
+          <label>Дата</label>
+          {{ form.date }}
+          {% if form.date.errors %}<div style="color:var(--status-noshow); font-size:13px;">{{ form.date.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="field" style="flex:1;">
+          <label>Время</label>
+          {{ form.time }}
+          {% if form.time.errors %}<div style="color:var(--status-noshow); font-size:13px;">{{ form.time.errors|striptags }}</div>{% endif %}
+        </div>
+      </div>
+
+      {# Клиент #}
+      <div style="display:flex; gap:12px;">
+        <div class="field" style="flex:1;">
+          <label>Телефон клиента</label>
+          {{ form.client_phone }}
+          {% if form.client_phone.errors %}<div style="color:var(--status-noshow); font-size:13px;">{{ form.client_phone.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="field" style="flex:1;">
+          <label>Имя клиента</label>
+          {{ form.client_name }}
+        </div>
+      </div>
+
+      <div class="field" style="display:flex; align-items:center; gap:9px;">
+        <input type="checkbox" name="pdn_consent" id="id_pdn_consent" style="width:auto;" {% if form.pdn_consent.value %}checked{% endif %}>
+        <label for="id_pdn_consent" style="margin:0;">Клиент дал согласие на обработку ПДн</label>
+      </div>
+
+      <button class="btn primary" type="submit" style="width:100%; justify-content:center; padding:11px;">Создать запись</button>
+    </form>
+  </div>
+{% endblock %}

@@ -1,0 +1,42 @@
+# Локальная разработка: только база в Docker, приложение гоняем через runserver
+# на хосте (так удобнее отлаживать). Можно поднять и web-сервис — см. профиль "full".
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${DB_NAME:-salon}
+      POSTGRES_USER: ${DB_USER:-salon}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-salon}
+    # Хост-порт 5433, чтобы не конфликтовать с ремонтной CRM (у неё 5432).
+    # Внутри контейнера Postgres всё равно слушает 5432.
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Веб-приложение в контейнере — опционально, включается профилем full:
+  #   docker compose --profile full up
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      DB_HOST: db
+      # Внутри docker-сети обращаемся к Postgres по 5432 (перебивает DB_PORT из .env,
+      # который задан для запуска приложения с ХОСТА через проброшенный 5433).
+      DB_PORT: "5432"
+      DEBUG: "1"
+      USE_HTTPS: "0"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    # Хост-порт 8001, чтобы не конфликтовать с runserver ремонтной CRM (8000).
+    ports:
+      - "8001:8000"
+    depends_on:
+      - db
+    profiles:
+      - full
+
+volumes:
+  pgdata:

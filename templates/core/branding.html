@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Брендирование · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'settings_home' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">Брендирование {% hint "branding.accent" %}</h1>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:520px;">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div class="field"><label>Название бренда</label>{{ form.brand_name }}</div>
+
+      <div style="display:flex; gap:16px; align-items:flex-end;">
+        <div class="field" style="flex:1;">
+          <label>Акцентный цвет</label>
+          {{ form.accent_color }}
+        </div>
+        <div class="field" style="flex:1;">
+          <label>Шрифт</label>
+          {{ form.font_preset }}
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Логотип</label>
+        {% if tenant.logo %}
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+            <img src="{{ tenant.logo.url }}" alt="" style="width:40px; height:40px; border-radius:9px; object-fit:cover; border:1px solid var(--border);">
+            <label style="margin:0; display:flex; align-items:center; gap:7px;">
+              <input type="checkbox" name="remove_logo" style="width:auto;"> Удалить логотип
+            </label>
+          </div>
+        {% endif %}
+        {{ form.logo }}
+      </div>
+
+      <button class="btn primary" type="submit" style="width:100%; justify-content:center;">Сохранить</button>
+    </form>
+  </div>
+
+  <div class="muted" style="font-size:13px; margin-top:12px; max-width:520px;">
+    База интерфейса остаётся нейтральной и премиальной — меняются только акцент, шрифт и логотип.
+    Так салон выглядит как ваш бренд, а не как чужой продукт.
+  </div>
+{% endblock %}
