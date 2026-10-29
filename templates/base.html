@@ -6,7 +6,7 @@
   <title>{% block title %}{{ brand.name|default:"Салон" }}{% endblock %}</title>
 
   {# Единый дизайн-файл. ?v — поднимать при каждой правке app.css (кэш). #}
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=17">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20">
   {# Календарь/часы — свои окна вместо системных (flatpickr, локально) #}
   <link rel="stylesheet" href="{% static 'vendor/flatpickr/flatpickr.min.css' %}">
   <link rel="stylesheet" href="{% static 'css/flatpickr-theme.css' %}?v=1">
@@ -123,21 +123,18 @@ document.addEventListener('touchstart', function (e) {
   if (!window.flatpickr) return;
   try { flatpickr.localize(flatpickr.l10ns.ru); } catch (e) {}
 
-  // Все поля даты: календарь с читаемой подписью, в форму уходит Y-m-d
+  // Все поля даты: календарь с читаемой подписью, в форму уходит Y-m-d.
+  // Пустое поле всегда открывается на СЕГОДНЯ (заполненное — на своей дате).
   flatpickr('input[type=date]', {
     dateFormat: 'Y-m-d',
     altInput: true, altFormat: 'j M Y',
+    defaultDate: 'today',
     disableMobile: true   // и на телефоне своё окно, не системное
   });
 
-  // Все поля времени: часы с шагом 5 мин, 24ч, в форму уходит H:i
-  flatpickr('input[type=time]', {
-    enableTime: true, noCalendar: true, time_24hr: true,
-    dateFormat: 'H:i', minuteIncrement: 5,
-    altInput: true, altFormat: 'H:i',
-    disableMobile: true
-  });
+  // Время обслуживает барабан (wheeltime.js), не flatpickr.
 })();
 </script>
+<script src="{% static 'js/wheeltime.js' %}?v=5"></script>
 </body>
 </html>
