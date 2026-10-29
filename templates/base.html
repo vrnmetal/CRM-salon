@@ -6,7 +6,7 @@
   <title>{% block title %}{{ brand.name|default:"Салон" }}{% endblock %}</title>
 
   {# Единый дизайн-файл. ?v — поднимать при каждой правке app.css (кэш). #}
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=7">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=11">
 
   {# White-label: переопределяем акцент тенанта ПОСЛЕ app.css (каскад побеждает). #}
   {% if brand.accent %}
@@ -22,12 +22,15 @@
 
   {# --- Левый сайдбар: бренд салона + навигация по правам --- #}
   <aside class="sidebar">
-    <div class="brand">
-      <div class="logo">
-        {% if brand.logo_url %}<img src="{{ brand.logo_url }}" alt="">{% else %}{{ brand.name|first|default:"S" }}{% endif %}
-      </div>
-      <div class="name">{{ brand.name|default:"Салон" }}</div>
-    </div>
+    <a class="brand {% if brand.logo_url %}has-logo{% endif %}" href="{% url 'home' %}" title="На главную">
+      {% if brand.logo_url %}
+        <div class="brand-logo"><img src="{{ brand.logo_url }}" alt="{{ brand.name|default:'Логотип' }}"></div>
+        <div class="name muted-name">{{ brand.name|default:"Салон" }}</div>
+      {% else %}
+        <div class="brand-mono">{{ brand.name|first|default:"S" }}</div>
+        <div class="name">{{ brand.name|default:"Салон" }}</div>
+      {% endif %}
+    </a>
 
     <nav class="nav">
       {% if request.user|can:"dashboard.view" %}

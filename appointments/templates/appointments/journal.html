@@ -19,10 +19,10 @@
   </div>
 
   {% if columns %}
-    {# Временная сетка: час = фиксированная высота, запись стоит на своём месте,
-       промежуток между записями виден как пустое пространство (без подсчётов). #}
+    {% comment %}Временная сетка: час = фиксированная высота, запись стоит на своём месте; клик по пустому месту колонки открывает быструю запись у этого мастера на это время (шаг 15 мин).{% endcomment %}
     <div id="journal" style="display:flex; gap:12px; overflow-x:auto; padding-bottom:6px; position:relative;"
-         data-start="{{ hours.0.label|slice:':2' }}" data-hourpx="{{ hour_px }}" data-header="52" data-height="{{ grid_height }}">
+         data-start="{{ hours.0.label|slice:':2' }}" data-hourpx="{{ hour_px }}" data-header="52" data-height="{{ grid_height }}"
+         data-date="{{ day|date:'Y-m-d' }}" data-canadd="{% if request.user|can:'appointment.create' %}1{% else %}0{% endif %}">
 
       {# Подсветка временной линии при наведении мыши (следует за курсором) #}
       <div id="hline" style="position:absolute; left:0; right:0; border-top:1px dashed var(--accent); display:none; pointer-events:none; z-index:5;"></div>
@@ -58,7 +58,8 @@
           </div>
 
           {# Тело колонки с часовыми линиями и блоками записей #}
-          <div class="card" style="position:relative; height:{{ grid_height }}px; padding:0; overflow:hidden;">
+          <div class="card col-body" data-emp="{{ col.employee.id }}" title="Нажмите на свободное место, чтобы записать клиента"
+               style="position:relative; height:{{ grid_height }}px; padding:0; overflow:hidden; {% if request.user|can:'appointment.create' %}cursor:pointer;{% endif %}">
             {% for h in hours %}
               <div style="position:absolute; top:{{ h.top }}px; left:0; right:0; border-top:1px solid var(--border);"></div>
             {% endfor %}
@@ -119,6 +120,26 @@
       bubble.style.top = y + 'px'; bubble.style.left = (grid.scrollLeft) + 'px'; bubble.style.display = 'block';
     });
     grid.addEventListener('mouseleave', function () { line.style.display = 'none'; bubble.style.display = 'none'; });
+
+    // --- Клик по пустому месту колонки -> быстрая запись у этого мастера на это время ---
+    if (grid.dataset.canadd === '1') {
+      var day = grid.dataset.date;
+      document.querySelectorAll('.col-body').forEach(function (body) {
+        body.addEventListener('click', function (e) {
+          // Клик по существующей записи (ссылке) — не создаём, пусть откроется карточка
+          if (e.target.closest('a')) return;
+          var r = body.getBoundingClientRect();
+          var y = e.clientY - r.top;                 // позиция внутри тела колонки
+          var mins = (y / hourPx) * 60;              // минут от начала дня
+          mins = Math.round(mins / 15) * 15;         // округление к шагу 15 мин
+          var total = startHour * 60 + mins;
+          var hh = Math.floor(total / 60), mm = total % 60;
+          var t = ('0' + hh).slice(-2) + ':' + ('0' + mm).slice(-2);
+          var emp = body.dataset.emp;
+          window.location.href = '{% url 'appointment_add' %}?date=' + day + '&employee=' + emp + '&time=' + t;
+        });
+      });
+    }
   })();
   </script>
 {% endblock %}

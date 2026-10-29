@@ -10,31 +10,96 @@
     </div>
   </div>
 
-  {# Zero-click: метрики сразу в лицо. Пока заглушки — подключим данные с модулями. #}
+  {# Главные метрики — сразу в лицо, без фильтров #}
   <div class="grid auto" style="margin-bottom:16px;">
     <div class="tile">
-      <div class="label">Выручка · этот месяц {% hint "appointment.quick" %}</div>
-      <div class="value">— ₽</div>
-    </div>
-    <div class="tile">
-      <div class="label">Повторные визиты</div>
-      <div class="value">—%</div>
+      <div class="label">Выручка · этот месяц {% hint "dashboard.revenue" %}</div>
+      <div class="value">{{ month_revenue|money }}&nbsp;₽</div>
+      <div class="delta flat">сегодня {{ today_stat.revenue|money }} ₽</div>
     </div>
     <div class="tile">
       <div class="label">Средний чек</div>
-      <div class="value">— ₽</div>
+      <div class="value">{{ avg_check|money }}&nbsp;₽</div>
     </div>
     <div class="tile">
-      <div class="label">Загрузка мастеров</div>
-      <div class="value">—%</div>
+      <div class="label">Повторные визиты</div>
+      <div class="value">{{ repeat_rate }}%</div>
+      <div class="delta flat">за месяц</div>
+    </div>
+    <div class="tile">
+      <div class="label">Загрузка мастеров сегодня</div>
+      <div class="value">{{ load }}%</div>
+      <div class="delta {% if free_hours %}down{% else %}up{% endif %}">свободно ~{{ free_hours }} ч</div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="empty">
-      <div class="big">Здесь будет дашборд-советник</div>
-      Метрики и подсказки с действием — «вернуть спящих», «заполнить окна», с эффектом
-      в рублях — появятся, когда подключим записи и клиентов. Это следующий шаг.
+  <div class="grid cols-2" style="align-items:start;">
+    {# Советник: инсайт + действие, с эффектом в рублях #}
+    <div class="card">
+      <h3 style="margin-top:0;">Что сделать сегодня</h3>
+
+      {% if sleeping %}
+        <a class="advice" href="{% url 'client_list' %}">
+          <div class="advice-ic">💤</div>
+          <div class="advice-body">
+            <div class="advice-title">Вернуть спящих — {{ sleeping }} клиент{{ sleeping|pluralize:",а,ов" }}</div>
+            <div class="advice-sub">Ходили, но пропали. Потенциал ~{{ sleeping_potential|money }} ₽ при среднем чеке.</div>
+          </div>
+          <div class="advice-go">→</div>
+        </a>
+      {% endif %}
+
+      {% if free_hours %}
+        <a class="advice" href="{% url 'journal' %}">
+          <div class="advice-ic">🗓️</div>
+          <div class="advice-body">
+            <div class="advice-title">Заполнить окна — ~{{ free_hours }} ч простоя</div>
+            <div class="advice-sub">Свободное время мастеров сегодня. Предложи запись спящим или из листа ожидания.</div>
+          </div>
+          <div class="advice-go">→</div>
+        </a>
+      {% endif %}
+
+      {% if noshow_month %}
+        <a class="advice" href="{% url 'journal' %}">
+          <div class="advice-ic">⚠️</div>
+          <div class="advice-body">
+            <div class="advice-title">Неявки за месяц — {{ noshow_month }}</div>
+            <div class="advice-sub">Напоминания и предоплата снижают неявки. Подключим в модуле уведомлений.</div>
+          </div>
+          <div class="advice-go">→</div>
+        </a>
+      {% endif %}
+
+      {% if not sleeping and not free_hours and not noshow_month %}
+        <div class="empty" style="padding:28px;"><div class="big">Всё под контролем</div>Нет срочных действий. Данные подтянутся по мере записей.</div>
+      {% endif %}
+    </div>
+
+    {# Сегодня + выручка за 7 дней #}
+    <div>
+      <div class="card" style="margin-bottom:16px;">
+        <h3 style="margin-top:0;">Сегодня</h3>
+        <div class="today-row">
+          <div><div class="today-n">{{ today_stat.total }}</div><div class="today-l">записей</div></div>
+          <div><div class="today-n" style="color:var(--status-came);">{{ today_stat.came }}</div><div class="today-l">пришли</div></div>
+          <div><div class="today-n" style="color:var(--status-wait);">{{ today_stat.waiting }}</div><div class="today-l">ждём</div></div>
+          <div><div class="today-n" style="color:var(--status-noshow);">{{ today_stat.noshow }}</div><div class="today-l">не пришли</div></div>
+        </div>
+        <a class="btn" href="{% url 'journal' %}" style="margin-top:14px;">Открыть журнал</a>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0;">Выручка · 7 дней</h3>
+        <div class="spark">
+          {% for d in week %}
+            <div class="spark-col" title="{{ d.rev|money }} ₽">
+              <div class="spark-bar{% if d.is_today %} today{% endif %}" style="height:{{ d.pct }}%;"></div>
+              <div class="spark-lbl">{{ d.label }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
     </div>
   </div>
 {% endblock %}

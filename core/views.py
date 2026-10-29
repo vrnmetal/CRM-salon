@@ -29,11 +29,87 @@ def home(request):
     return redirect("journal")
 
 
-# --- Дашборд собственника (zero-click, заглушка под будущие метрики) ---
+# --- Дашборд собственника (zero-click: метрики встречают, а не ищутся) ---
 @login_required
 @requires("dashboard.view")
 def dashboard(request):
-    return render(request, "core/dashboard.html")
+    from datetime import timedelta
+
+    from django.db.models import Count, Max, Sum
+    from django.utils import timezone
+
+    from appointments.models import Appointment
+    from staff.models import Employee
+
+    A = Appointment
+    now = timezone.now()
+    today = timezone.localdate()
+    month_start = today.replace(day=1)
+    WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+
+    # --- Выручка и чек за месяц (деньги = визиты со статусом «пришёл») ---
+    came_month = A.objects.filter(status=A.STATUS_CAME, start__date__gte=month_start)
+    month_came = came_month.count()
+    month_revenue = int(came_month.aggregate(s=Sum("price"))["s"] or 0)
+    avg_check = int(month_revenue / month_came) if month_came else 0
+
+    # --- Повторные визиты: доля визитов за месяц от вернувшихся клиентов ---
+    returning_ids = [
+        r["client"] for r in A.objects.filter(status=A.STATUS_CAME)
+        .values("client").annotate(n=Count("id")) if r["n"] > 1
+    ]
+    repeat_from = came_month.filter(client_id__in=returning_ids).count()
+    repeat_rate = round(100 * repeat_from / month_came) if month_came else 0
+
+    # --- Загрузка мастеров сегодня (занятые минуты / доступные) ---
+    today_appts = A.objects.filter(start__date=today)
+    booked_min = today_appts.exclude(status=A.STATUS_NOSHOW).aggregate(s=Sum("duration_min"))["s"] or 0
+    masters = Employee.objects.count()
+    work_min = masters * (22 - 9) * 60  # рабочее окно журнала 9–22
+    load = round(100 * booked_min / work_min) if work_min else 0
+    free_hours = max(0, (work_min - booked_min)) // 60
+
+    # --- Сегодня одним взглядом ---
+    today_stat = {
+        "total": today_appts.count(),
+        "came": today_appts.filter(status=A.STATUS_CAME).count(),
+        "waiting": today_appts.filter(status__in=[A.STATUS_WAIT, A.STATUS_CONFIRMED]).count(),
+        "noshow": today_appts.filter(status=A.STATUS_NOSHOW).count(),
+        "revenue": int(today_appts.filter(status=A.STATUS_CAME).aggregate(s=Sum("price"))["s"] or 0),
+    }
+
+    # --- Советник: спящие клиенты (ходили, но пропали 45–120 дней) + потенциал ₽ ---
+    last_visits = A.objects.filter(status=A.STATUS_CAME).values("client").annotate(last=Max("start"))
+    sleeping = sum(
+        1 for v in last_visits
+        if v["last"] and timedelta(days=45) <= (now - v["last"]) <= timedelta(days=120)
+    )
+    sleeping_potential = sleeping * avg_check
+    noshow_month = A.objects.filter(status=A.STATUS_NOSHOW, start__date__gte=month_start).count()
+
+    # --- Мини-график выручки за 7 дней ---
+    week = []
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        rev = int(A.objects.filter(status=A.STATUS_CAME, start__date=d).aggregate(s=Sum("price"))["s"] or 0)
+        week.append({"label": WEEKDAYS[d.weekday()], "rev": rev, "is_today": d == today})
+    max_rev = max((x["rev"] for x in week), default=0) or 1
+    for x in week:
+        x["pct"] = round(100 * x["rev"] / max_rev)
+
+    context = {
+        "month_revenue": month_revenue,
+        "avg_check": avg_check,
+        "repeat_rate": repeat_rate,
+        "load": load,
+        "free_hours": free_hours,
+        "today_stat": today_stat,
+        "sleeping": sleeping,
+        "sleeping_potential": sleeping_potential,
+        "noshow_month": noshow_month,
+        "week": week,
+    }
+    return render(request, "core/dashboard.html", context)
 
 
 # --- Настройки доступа: РЕДАКТИРУЕМЫЕ галочки прав по ролям ---

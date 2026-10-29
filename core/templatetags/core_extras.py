@@ -19,6 +19,16 @@ def can(user, code):
     return _has_perm(user, code)
 
 
+# --- {{ 125000|money }} → «125 000» (разряды пробелом, по-русски) ---
+@register.filter(name="money")
+def money(value):
+    try:
+        n = int(round(float(value)))
+    except (TypeError, ValueError):
+        return value
+    return f"{n:,}".replace(",", " ")
+
+
 # --- {% hint "key" %} — значок подсказки, если у пользователя включён показ ---
 @register.simple_tag(takes_context=True)
 def hint(context, key):

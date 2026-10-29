@@ -256,7 +256,17 @@ def quick_add(request):
             url = reverse("journal") + f"?date={cd['date'].isoformat()}"
             return redirect(url)
     else:
-        # Предзаполним дату выбранным днём журнала (или сегодня)
-        form = QuickAppointmentForm(initial={"date": _parse_date(request)})
+        # Предзаполняем из ссылки: день журнала + (при клике по сетке) мастер и время
+        initial = {"date": _parse_date(request)}
+        emp_id = request.GET.get("employee")
+        if emp_id and Employee.objects.filter(pk=emp_id, is_active=True).exists():
+            initial["employee"] = emp_id
+        raw_time = request.GET.get("time")
+        if raw_time:
+            try:
+                initial["time"] = datetime.strptime(raw_time, "%H:%M").time()
+            except ValueError:
+                pass
+        form = QuickAppointmentForm(initial=initial)
 
     return render(request, "appointments/quick_add.html", {"form": form})
