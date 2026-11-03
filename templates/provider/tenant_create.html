@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Новый салон · Провайдер{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'provider_home' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">Новый салон</h1>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:560px;">
+    <form method="post">
+      {% csrf_token %}
+      <div class="field"><label>Название салона</label><input name="name" required placeholder="Рога и Копыта"></div>
+      <div class="field"><label>Поддомен</label><input name="slug" required placeholder="rogaikopyta" pattern="[a-z0-9-]+"></div>
+      <div class="muted" style="font-size:12px; margin:-8px 0 14px;">Адрес салона: <code>поддомен.ваш-домен</code>. Свой домен — позже в карточке.</div>
+
+      <div class="field"><label>Логин владельца</label><input name="owner_login" required placeholder="owner_rogaikopyta"></div>
+      <div class="field"><label>Пароль владельца</label><input name="owner_pass" type="text" required></div>
+
+      <div class="field">
+        <label>Модули (ядро включено всегда)</label>
+        <div class="perm-section" style="margin:0; padding:0;">
+          {% for m in modules %}
+            <label class="perm-row" style="cursor:pointer;">
+              <input type="checkbox" name="modules" value="{{ m.code }}" style="width:auto;">
+              <span>{{ m.label }}</span><span class="code">{{ m.code }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <button class="btn primary" type="submit" style="width:100%; justify-content:center;">Создать салон</button>
+    </form>
+  </div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Схема · {{ e.full_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'payroll_schemes' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">Схема ЗП · {{ e.full_name }}</h1>
+      <div class="muted" style="font-size:14px; margin-top:4px;">{{ e.specialization }}</div>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:480px;">
+    <form method="post">
+      {% csrf_token %}
+      <div class="field">
+        <label>Схема начисления</label>
+        <select name="scheme">
+          <option value="">— без схемы (ЗП не считается) —</option>
+          {% for s in schemes %}
+            <option value="{{ s.id }}" {% if e.payroll_scheme_id == s.id %}selected{% endif %}>{{ s.name }} · оклад {{ s.base_per_day|floatformat:0 }} ₽/смена</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <a class="btn" href="{% url 'payroll_schemes' %}">Отмена</a>
+        <button class="btn primary" type="submit" style="flex:1; justify-content:center;">Сохранить</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

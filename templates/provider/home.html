@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Провайдер · Тенанты{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1 class="display" style="margin:0;">Тенанты</h1>
+      <div class="muted" style="font-size:14px; margin-top:4px;">Пульт управления салонами. Данные клиентов — только через impersonation с аудитом.</div>
+    </div>
+    <a class="btn primary" href="{% url 'provider_tenant_create' %}">Новый салон</a>
+  </div>
+
+  <div class="grid auto" style="margin-bottom:16px;">
+    <div class="tile"><div class="label">Всего салонов</div><div class="value">{{ kpis.total }}</div></div>
+    <div class="tile"><div class="label">Активны</div><div class="value" style="color:var(--status-came);">{{ kpis.active }}</div></div>
+    <div class="tile"><div class="label">Заморожены</div><div class="value">{{ kpis.frozen }}</div></div>
+    <div class="tile"><div class="label">Просрочка оплаты</div><div class="value" style="color:var(--status-noshow);">{{ kpis.overdue }}</div></div>
+  </div>
+
+  <div class="card" style="padding:6px 0;">
+    {% for r in rows %}
+      <a class="emp-row emp-link" href="{% url 'provider_tenant' r.t.id %}" style="grid-template-columns:auto 1fr auto auto auto;">
+        <span class="emp-dot" style="background:{% if r.t.is_active %}var(--status-came){% else %}var(--text-muted){% endif %};"></span>
+        <div class="emp-id">
+          <div class="title">{{ r.t.name }}</div>
+          <div class="sub">{{ r.t.slug }}{% if r.t.custom_domain %} · {{ r.t.custom_domain }}{% if not r.t.custom_domain_verified %} (не подтверждён){% endif %}{% endif %}</div>
+        </div>
+        <div class="emp-meta"><span class="tag">{{ r.t.plan|default:"без тарифа" }}</span></div>
+        <div class="emp-meta">
+          {% if r.overdue %}<span class="tag danger">просрочка</span>
+          {% elif r.t.paid_until %}<span class="muted" style="font-size:13px;">до {{ r.t.paid_until|date:"d.m.Y" }}</span>
+          {% else %}<span class="muted" style="font-size:13px;">—</span>{% endif %}
+        </div>
+        <div class="emp-meta">
+          {% if not r.t.is_active %}<span class="tag danger">заморожен</span>{% else %}<span class="muted" style="font-size:12px;">{{ r.accounts }} акк · {{ r.modules_on }} мод</span>{% endif %}
+          <span class="emp-go">›</span>
+        </div>
+      </a>
+    {% empty %}
+      <div class="empty" style="padding:40px;"><div class="big">Пока нет салонов</div>Нажмите «Новый салон».</div>
+    {% endfor %}
+  </div>
+{% endblock %}

@@ -67,20 +67,40 @@ register("service.view", "Видеть услуги", "appointments", "Услу�
 register("service.create", "Создавать услугу", "appointments", "Услуги")
 register("service.edit", "Изменять услугу", "appointments", "Услуги")
 
+# --- Расчёт зарплат (модуль-тумблер) ---
+register("payroll.view", "Видеть расчёт ЗП", "payroll", "Зарплаты")
+register("payroll.manage", "Управлять схемами ЗП", "payroll", "Зарплаты")
+
+# --- Склад и тех. карты (модуль-тумблер) ---
+register("stock.view", "Видеть склад", "stock", "Склад")
+register("stock.manage", "Управлять складом (материалы, приход/списание)", "stock", "Склад")
+register("techcard.edit", "Редактировать тех. карты услуг", "stock", "Склад")
+
 # --- Дашборд ---
 register("dashboard.view", "Видеть дашборд собственника", "dashboard", "Аналитика")
 
 # --- Финансы и касса (модуль-тумблер) ---
 register("finance.view", "Видеть финансы и кассу", "finance", "Финансы")
+register("payment.view", "Видеть оплаты записи", "finance", "Финансы")
+register("payment.charge", "Принимать оплату (терминал)", "finance", "Финансы")
+
+# --- Абонементы и сертификаты (модуль-тумблер) ---
+register("subscription.view", "Видеть абонементы", "subscriptions", "Абонементы")
+register("subscription.manage", "Управлять продуктами (абонементы/сертификаты)", "subscriptions", "Абонементы")
+register("subscription.sell", "Продавать абонементы клиентам", "subscriptions", "Абонементы")
+register("subscription.redeem", "Списывать оплату с абонемента", "subscriptions", "Абонементы")
 
 # --- Системные (всегда доступны при наличии права, без гейтинга по модулю) ---
 register("access.manage", "Настраивать доступы (роли и права)", "system", "Администрирование")
 register("account.manage", "Создавать и удалять аккаунты", "system", "Администрирование")
 register("branding.manage", "Настраивать брендирование", "system", "Администрирование")
+register("history.view", "Видеть историю действий", "system", "Администрирование")
+register("history.undo", "Отменять действия из истории", "system", "Администрирование")
 
 # --- Провайдерский слой (только is_provider_admin) ---
 register("provider.tenants.view", "Видеть список тенантов", "provider", "Провайдер")
 register("provider.tenant.toggle", "Включать/выключать тенанта", "provider", "Провайдер")
+register("provider.tenant.manage", "Управлять тенантом (тариф, модули, домен, оплата)", "provider", "Провайдер")
 register("provider.impersonate", "Входить как клиент (impersonate)", "provider", "Провайдер")
 
 
@@ -163,6 +183,12 @@ def role_presets() -> dict[str, dict]:
     admin_codes = _codes_for_modules({"appointments", "clients"}) + [
         "staff.view",
         "dashboard.view",
+        # Администратор на ресепшене принимает оплату и работает с абонементами
+        "payment.view",
+        "payment.charge",
+        "subscription.view",
+        "subscription.sell",
+        "subscription.redeem",
     ]
     master_codes = [
         "appointment.view",

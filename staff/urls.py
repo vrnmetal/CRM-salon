@@ -6,6 +6,7 @@ from staff import views
 urlpatterns = [
     # Ростер — пункт сайдбара
     path("staff/", views.staff_list, name="staff_list"),
+    path("staff/<int:pk>/", views.staff_detail, name="staff_detail"),
     # Управление — в Настройках
     path("settings/staff/", views.staff_manage, name="staff_manage"),
     path("settings/staff/create/", views.staff_create, name="staff_create"),

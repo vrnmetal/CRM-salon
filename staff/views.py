@@ -4,6 +4,9 @@
 Ростер — только просмотр: вкладки Работают/Уволенные, внутри работающих деление
 на «в смене сегодня» и «не в смене». Создание/редактирование вынесено в Настройки.
 """
+from collections import Counter
+from datetime import timedelta
+
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q
@@ -16,6 +19,18 @@ from core.permissions import has_perm, requires, requires_any
 from staff.models import Employee
 
 WEEKDAYS = [(0, "Пн"), (1, "Вт"), (2, "Ср"), (3, "Чт"), (4, "Пт"), (5, "Сб"), (6, "Вс")]
+
+# Пока нет модуля расчёта ЗП — ставка-заглушка для ОЦЕНКИ (явно помечаем в UI).
+DEFAULT_COMMISSION = 0.40
+STAT_PERIODS = [("today", "Сегодня"), ("week", "7 дней"), ("month", "Этот месяц")]
+
+
+def _period_range(period, today):
+    if period == "today":
+        return today, today
+    if period == "week":
+        return today - timedelta(days=6), today
+    return today.replace(day=1), today  # month-to-date
 
 
 def _today_counts(day):
@@ -58,6 +73,76 @@ def staff_list(request):
     context["today"] = today
     context["can_manage"] = has_perm(request.user, "staff.create") or has_perm(request.user, "staff.edit")
     return render(request, "staff/list.html", context)
+
+
+# --- Карточка сотрудника: личные показатели (клик по строке в ростере) ---
+@login_required
+@requires("staff.view")
+def staff_detail(request, pk):
+    e = get_object_or_404(Employee, pk=pk)
+    today = timezone.localdate()
+    period = request.GET.get("period", "month")
+    if period not in dict(STAT_PERIODS):
+        period = "month"
+    start, end = _period_range(period, today)
+
+    came = (
+        Appointment.objects.filter(employee=e, status=Appointment.STATUS_CAME,
+                                    start__date__gte=start, start__date__lte=end)
+        .prefetch_related("lines__service")
+    )
+
+    revenue = 0
+    visits = 0
+    duration_min = 0
+    extra_count = 0        # доп. услуги сверх первой
+    extra_sum = 0          # деньги с доп. услуг
+    clients = set()
+    services = Counter()
+    for a in came:
+        visits += 1
+        revenue += a.price
+        duration_min += a.duration_min
+        clients.add(a.client_id)
+        lines = list(a.lines.all())
+        for i, ln in enumerate(lines):
+            services[ln.service.name if ln.service else "—"] += 1
+            if i > 0:
+                extra_count += 1
+                extra_sum += ln.price
+
+    revenue = int(revenue)
+    extra_sum = int(extra_sum)
+    avg_check = int(revenue / visits) if visits else 0
+
+    noshow = Appointment.objects.filter(
+        employee=e, status=Appointment.STATUS_NOSHOW,
+        start__date__gte=start, start__date__lte=end
+    ).count()
+
+    # Отработанные часы (по проведённым визитам) и смены по графику
+    hours = round(duration_min / 60, 1)
+    scheduled_days = 0
+    d = start
+    while d <= end:
+        if e.on_shift(d):
+            scheduled_days += 1
+        d += timedelta(days=1)
+
+    salary_est = int(revenue * DEFAULT_COMMISSION)
+
+    context = {
+        "e": e,
+        "periods": STAT_PERIODS, "period": period, "start": start, "end": end,
+        "work_days": [lbl for code, lbl in WEEKDAYS if code in (e.work_days or [])],
+        "revenue": revenue, "visits": visits, "clients": len(clients),
+        "avg_check": avg_check, "hours": hours, "scheduled_days": scheduled_days,
+        "extra_count": extra_count, "extra_sum": extra_sum, "noshow": noshow,
+        "salary_est": salary_est, "commission_pct": int(DEFAULT_COMMISSION * 100),
+        "top_services": services.most_common(6),
+        "can_manage": has_perm(request.user, "staff.edit"),
+    }
+    return render(request, "staff/detail.html", context)
 
 
 # --- Управление сотрудниками (в Настройках): список + создание ---

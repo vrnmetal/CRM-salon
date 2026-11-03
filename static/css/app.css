@@ -147,9 +147,16 @@ h3 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 .4e
 }
 .sidebar .foot button.link:hover { color: var(--text); }
 
-.content { flex: 1; padding: 36px 44px; max-width: 1040px; }
-.page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+.content { flex: 1; padding: 36px 44px; width: 100%; min-width: 0; max-width: 1500px; }
+/* Заголовок слева, кнопки действий — по центру экрана (3-колоночная сетка) */
+.page-head { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center; margin-bottom: 28px; }
+.page-head > :first-child { grid-column: 1; min-width: 0; }
+.page-head > :nth-child(2) { grid-column: 2; }
 .page-head .sub { font-size: 13px; color: var(--text-soft); }
+@media (max-width: 760px) {
+  .page-head { grid-template-columns: 1fr; }
+  .page-head > :nth-child(2) { grid-column: 1; justify-self: start; }
+}
 
 /* --- Ссылка «Назад» (над заголовком, слева, со стрелкой) --- */
 .back { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
@@ -429,3 +436,151 @@ input:focus, select:focus, textarea:focus {
               background: color-mix(in srgb, var(--accent) 7%, transparent); }
 .wtime-actions { display: flex; gap: 10px; margin-top: 14px; }
 .wtime-actions .btn { flex: 1; justify-content: center; }
+
+/* --- Автодополнение клиента в быстрой записи --- */
+.ac-wrap { position: relative; }
+.ac-wrap .search-res { top: calc(100% + 4px); }
+
+/* --- Поле выбора цвета: компактный свотч, а не полоса на всю ширину --- */
+input[type="color"] { width: 52px; height: 38px; padding: 3px; cursor: pointer; border-radius: var(--radius-sm); }
+
+/* --- Управление сотрудниками: карточка-сотрудник --- */
+.emp-card { margin-bottom: 16px; padding: 0; overflow: hidden; }
+.emp-card-head { display: flex; align-items: center; gap: 12px; padding: 16px 20px;
+                 background: var(--surface-2); border-bottom: 1px solid var(--border); }
+.emp-card-head .acc-avatar { color: #fff; }
+.emp-card-name { font-weight: 600; font-size: 16px; letter-spacing: -0.01em; }
+.emp-card-head .sub { font-size: 13px; color: var(--text-soft); }
+.emp-card-body { padding: 18px 20px; }
+.emp-card-body .field label { font-size: 13px; color: var(--text-muted); }
+.color-field { display: flex; flex-direction: column; }
+.color-field .swatch-row { display: flex; align-items: center; gap: 10px; }
+.tag.danger { color: var(--status-noshow); }
+
+/* --- Кликабельная строка ростера -> карточка сотрудника --- */
+a.emp-link { text-decoration: none; color: inherit; cursor: pointer; }
+a.emp-link:hover { background: var(--surface-2); }
+a.emp-link .emp-go { color: var(--text-muted); font-size: 18px; margin-left: 8px; }
+a.emp-link .emp-meta { display: flex; align-items: center; gap: 8px; }
+
+/* --- Баннер impersonation (провайдер «внутри» салона) --- */
+.imp-banner { position: sticky; top: 0; z-index: 90; display: flex; align-items: center;
+              justify-content: space-between; gap: 12px; padding: 9px 18px;
+              background: var(--status-wait); color: #fff; font-size: 14px; }
+.imp-banner .btn { background: rgba(255,255,255,.18); border-color: transparent; color: #fff; padding: 6px 12px; }
+.imp-banner .btn:hover { background: rgba(255,255,255,.3); }
+
+/* --- Блок оплаты в карточке записи --- */
+.pay-paid { display: flex; justify-content: space-between; align-items: center; gap: 10px;
+            color: var(--status-came); font-weight: 500; padding: 12px 14px; border-radius: var(--radius-sm);
+            background: color-mix(in srgb, var(--status-came) 10%, transparent); }
+.pay-sent { color: var(--status-wait); font-weight: 500; padding: 12px 14px; border-radius: var(--radius-sm);
+            background: color-mix(in srgb, var(--status-wait) 12%, transparent); }
+.pay-fail { color: var(--status-noshow); font-size: 13px; margin-bottom: 10px; }
+
+/* --- Провайдер: управление аккаунтами салона --- */
+.acc-manage { border-bottom: 1px solid var(--border); }
+.acc-manage:last-child { border-bottom: none; }
+.acc-manage summary { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center;
+                      padding: 11px 2px; cursor: pointer; list-style: none; }
+.acc-manage summary::-webkit-details-marker { display: none; }
+.acc-manage summary:hover .fin-name { color: var(--accent); }
+.acc-manage-body { padding: 4px 2px 14px; display: flex; flex-direction: column; gap: 10px; }
+.inline-form { display: flex; gap: 8px; }
+.inline-form input { flex: 1; }
+
+/* --- Склад: ровная таблица материалов --- */
+.mat-head { display: grid; grid-template-columns: 1fr 100px 100px 110px 18px; gap: 12px; padding: 8px 16px;
+            font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted);
+            border-bottom: 1px solid var(--border); }
+.mat-head div:nth-child(2), .mat-head div:nth-child(3), .mat-head div:nth-child(4) { text-align: right; }
+.mat { border-bottom: 1px solid var(--border); }
+.mat:last-child { border-bottom: none; }
+.mat-row { display: grid; grid-template-columns: 1fr 100px 100px 110px 18px; gap: 12px; align-items: center;
+           padding: 12px 16px; cursor: pointer; list-style: none; }
+.mat-row::-webkit-details-marker { display: none; }
+.mat-row:hover .mat-name { color: var(--accent); }
+.mat-name { font-weight: 500; }
+.mat-price { text-align: right; color: var(--text-soft); font-size: 13px; }
+.mat-qty { text-align: right; font-weight: 600; }
+.mat-value { text-align: right; color: var(--text); font-size: 14px; }
+.mat-chev { text-align: center; color: var(--text-muted); transition: transform .15s; }
+.mat[open] .mat-chev { transform: rotate(90deg); }
+.mat-total { display: flex; justify-content: space-between; padding: 14px 16px;
+             border-top: 2px solid var(--border-strong); font-weight: 600; }
+
+@media (max-width: 640px) {
+  .mat-head { display: none; }
+  .mat-row { grid-template-columns: 1fr auto 18px; }
+  .mat-price, .mat-value { display: none; }
+}
+
+/* --- Склад: широкая колонка материалов + залипающие движения --- */
+.stock-layout { display: flex; gap: 16px; align-items: flex-start; }
+.stock-materials { flex: 1; min-width: 0; }
+.stock-moves { flex: 0 0 340px; position: sticky; top: 16px;
+               max-height: calc(100vh - 90px); overflow-y: auto; }
+@media (max-width: 900px) {
+  .stock-layout { flex-direction: column; }
+  .stock-moves { flex: none; width: 100%; position: static; max-height: none; }
+}
+
+/* --- История действий --- */
+.hist-row { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;
+            padding: 12px 20px; border-bottom: 1px solid var(--border); }
+.hist-row:last-child { border-bottom: none; }
+.hist-undone { opacity: .55; }
+.hist-dot { width: 8px; height: 8px; border-radius: 50%; }
+.hist-create { background: var(--status-came); }
+.hist-update { background: var(--status-confirmed); }
+.hist-delete { background: var(--status-noshow); }
+.hist-title { font-weight: 500; font-size: 14px; }
+.hist-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+/* --- Зарплаты: таблица расчёта --- */
+.pay-head, .pay-row, .pay-foot { display: grid;
+  grid-template-columns: 1.6fr 64px 76px 110px 56px 110px 110px 120px; gap: 10px; align-items: center; }
+.pay-head { padding: 8px 20px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+            color: var(--text-muted); border-bottom: 1px solid var(--border); }
+.pay-head div:not(:first-child) { text-align: right; }
+.pay-row { padding: 12px 20px; border-bottom: 1px solid var(--border); }
+.pay-row:last-of-type { border-bottom: none; }
+.pay-name { font-weight: 500; }
+.pay-sub { font-size: 12px; color: var(--text-soft); margin-top: 2px; }
+.pay-c { text-align: right; font-variant-numeric: tabular-nums; }
+.pay-total { font-weight: 600; }
+.pay-foot { padding: 14px 20px; border-top: 2px solid var(--border-strong); font-weight: 600; }
+.pay-foot div:first-child { grid-column: 1 / 8; }
+.pay-foot div:last-child { text-align: right; }
+@media (max-width: 900px) {
+  .pay-head { display: none; }
+  .pay-row { grid-template-columns: 1fr auto; }
+  .pay-c:not(.pay-total) { display: none; }
+}
+
+/* --- Зарплаты: пороги схемы --- */
+.tier-label { font-size: 13px; font-weight: 560; margin: 6px 0 8px; }
+.tier-label .muted { font-weight: 400; }
+.tier-list { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 12px; }
+.tier-row { display: grid; grid-template-columns: 1fr auto 56px auto; gap: 12px; align-items: center;
+            padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.tier-row:last-child { border-bottom: none; }
+.tier-arrow { color: var(--text-muted); }
+.tier-pct { font-weight: 600; text-align: right; }
+.tier-add { background: var(--surface-2); border-radius: var(--radius-sm); padding: 12px 14px; }
+.tier-add-title { font-weight: 560; font-size: 14px; margin-bottom: 8px; }
+.tier-add-fields { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.tier-add-fields label { display: flex; flex-direction: column; gap: 4px; font-size: 12px;
+                         color: var(--text-muted); flex: 1; min-width: 150px; }
+.tier-add-fields .btn { flex: 0 0 auto; }
+
+/* --- Быстрая смена статуса записи --- */
+.status-switch { display: flex; gap: 6px; flex-wrap: wrap; }
+.st-btn { padding: 7px 13px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+          background: var(--surface); color: var(--text-muted); cursor: pointer; font-size: 14px; }
+.st-btn:hover { background: var(--surface-2); }
+.st-btn.on { color: #fff; }
+.st-btn.on.st-wait { background: var(--status-wait); border-color: var(--status-wait); }
+.st-btn.on.st-confirmed { background: var(--status-confirmed); border-color: var(--status-confirmed); }
+.st-btn.on.st-came { background: var(--status-came); border-color: var(--status-came); }
+.st-btn.on.st-noshow { background: var(--status-noshow); border-color: var(--status-noshow); }

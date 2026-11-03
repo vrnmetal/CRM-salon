@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}{{ t.name }} · Провайдер{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'provider_home' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">{{ t.name }}</h1>
+      <div class="muted" style="font-size:14px; margin-top:4px;">
+        {{ t.slug }}.{{ base_domain }}{% if not t.is_active %} · <span style="color:var(--status-noshow);">заморожен</span>{% endif %}
+      </div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <form method="post" action="{% url 'provider_impersonate' t.id %}">{% csrf_token %}
+        <button class="btn" type="submit">Войти как салон</button>
+      </form>
+      <form method="post" action="{% url 'provider_tenant_toggle' t.id %}">{% csrf_token %}
+        <button class="btn {% if t.is_active %}danger{% endif %}" type="submit">{% if t.is_active %}Заморозить{% else %}Разморозить{% endif %}</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="grid cols-2" style="align-items:start;">
+    {# Тариф + оплата #}
+    <div class="card">
+      <h3 style="margin-top:0;">Тариф и оплата</h3>
+      <form method="post" action="{% url 'provider_tenant_billing' t.id %}">{% csrf_token %}
+        <div class="field"><label>Тариф</label><input name="plan" value="{{ t.plan }}" placeholder="Старт / Бизнес / Про"></div>
+        <div class="field"><label>Оплачено до</label><input type="date" name="paid_until" value="{{ t.paid_until|date:'Y-m-d' }}"></div>
+        <button class="btn primary" type="submit">Сохранить</button>
+      </form>
+    </div>
+
+    {# Модули #}
+    <div class="card">
+      <h3 style="margin-top:0;">Модули сборки</h3>
+      <form method="post" action="{% url 'provider_tenant_modules' t.id %}">{% csrf_token %}
+        <div class="perm-section" style="margin:0; padding:0;">
+          {% for row in modules %}
+            <label class="perm-row" style="cursor:pointer;">
+              <input type="checkbox" name="modules" value="{{ row.m.code }}" style="width:auto;" {% if row.on %}checked{% endif %}>
+              <span>{{ row.m.label }}</span>
+              <span class="code">{{ row.m.code }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        <button class="btn primary" type="submit" style="margin-top:12px;">Сохранить набор</button>
+      </form>
+      <div class="muted" style="font-size:12px; margin-top:8px;">Ядро (записи, клиенты, сотрудники, дашборд) включено всегда.</div>
+    </div>
+  </div>
+
+  {# Кастомный домен #}
+  <div class="card" style="margin-top:16px;">
+    <h3 style="margin-top:0;">Свой домен клиента</h3>
+    <form method="post" action="{% url 'provider_tenant_domain' t.id %}" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+      {% csrf_token %}
+      <div class="field" style="flex:1; min-width:240px; margin:0;">
+        <label>Домен</label>
+        <input name="custom_domain" value="{{ t.custom_domain|default:'' }}" placeholder="rogaikopyta.ru">
+      </div>
+      <button class="btn primary" type="submit">Сохранить домен</button>
+    </form>
+
+    {% if t.custom_domain %}
+      <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <span class="tag {% if t.custom_domain_verified %}{% else %}danger{% endif %}" style="{% if t.custom_domain_verified %}color:var(--status-came);{% endif %}">
+            {% if t.custom_domain_verified %}подтверждён{% else %}не подтверждён{% endif %}
+          </span>
+          <span class="muted" style="font-size:13px;">{{ t.custom_domain }}</span>
+        </div>
+        {% if not t.custom_domain_verified %}
+          <div class="muted" style="font-size:13px; line-height:1.6;">
+            Клиент добавляет у регистратора две записи:<br>
+            1) <b>CNAME</b> <code>{{ t.custom_domain }}</code> → <code>app.{{ base_domain }}</code><br>
+            2) <b>TXT</b> <code>_salon-verify.{{ t.custom_domain }}</code> = <code>{{ t.domain_token }}</code>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:12px;">
+            <form method="post" action="{% url 'provider_tenant_domain_verify' t.id %}">{% csrf_token %}
+              <button class="btn" type="submit">Проверить DNS</button>
+            </form>
+            <form method="post" action="{% url 'provider_tenant_domain_verify' t.id %}">{% csrf_token %}
+              <input type="hidden" name="manual" value="1">
+              <button class="btn" type="submit">Подтвердить вручную</button>
+            </form>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  {# Аккаунты (без входа в данные) + аудит #}
+  <div class="grid cols-2" style="margin-top:16px; align-items:start;">
+    <div class="card">
+      <h3 style="margin-top:0;">Аккаунты салона</h3>
+      <div class="muted" style="font-size:12px; margin-bottom:10px;">Если владелец забыл доступ — сбрось пароль или смени логин здесь.</div>
+      {% for u in accounts %}
+        <details class="acc-manage">
+          <summary>
+            <div class="fin-name">{{ u.first_name|default:u.username }}</div>
+            <div class="fin-sub">{{ u.username }}</div>
+            <div class="fin-sum" style="font-weight:400; font-size:13px;">{% if u.role %}{{ u.role.name }}{% endif %}</div>
+          </summary>
+          <div class="acc-manage-body">
+            <form method="post" action="{% url 'provider_account_rename' u.id %}" class="inline-form">
+              {% csrf_token %}
+              <input name="username" value="{{ u.username }}" aria-label="Логин">
+              <button class="btn" type="submit">Сменить логин</button>
+            </form>
+            <form method="post" action="{% url 'provider_account_reset' u.id %}" class="inline-form">
+              {% csrf_token %}
+              <input name="password" type="text" placeholder="новый пароль (пусто = сгенерировать)" aria-label="Новый пароль">
+              <button class="btn danger" type="submit">Сбросить пароль</button>
+            </form>
+            <div class="muted" style="font-size:12px;">Новый пароль покажется разово вверху страницы — передай его владельцу.</div>
+          </div>
+        </details>
+      {% empty %}
+        <div class="empty" style="padding:22px;">Нет аккаунтов.</div>
+      {% endfor %}
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0;">Последние действия</h3>
+      {% for a in audit %}
+        <div class="fin-row"><div class="fin-name" style="font-weight:400;">{{ a.action }}{% if a.target %} · {{ a.target }}{% endif %}</div><div class="fin-sum" style="font-weight:400; font-size:12px; color:var(--text-muted);">{{ a.created_at|date:"d.m H:i" }}</div></div>
+      {% empty %}
+        <div class="empty" style="padding:22px;">Пока пусто.</div>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% load static %}<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Подтверждение входа</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=3">
+</head>
+<body>
+<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;">
+  <div style="width:100%; max-width:340px;">
+    <h1 class="display" style="margin-bottom:2px;">Код из приложения</h1>
+    <p class="muted" style="margin:0 0 24px;">Введите 6-значный код из Google Authenticator. Потеряли телефон — введите резервный код.</p>
+
+    {% if error %}<p style="color:var(--status-noshow); margin-top:0;">{{ error }}</p>{% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="field">
+        <label for="code">Код</label>
+        <input type="text" name="code" id="code" autofocus autocomplete="one-time-code" inputmode="numeric" placeholder="123456">
+      </div>
+      <button class="btn primary" type="submit" style="width:100%; justify-content:center; padding:11px;">Подтвердить</button>
+    </form>
+    <p style="margin-top:16px;"><a href="{% url 'login' %}" class="muted">← Назад ко входу</a></p>
+  </div>
+</div>
+</body>
+</html>

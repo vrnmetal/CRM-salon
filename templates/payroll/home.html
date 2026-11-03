@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Зарплаты · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1 class="display" style="margin:0;">Зарплаты</h1>
+      <div class="muted" style="font-size:14px; margin-top:4px;">Расчёт за период · {{ start|date:"j M" }} — {{ end|date:"j M" }}</div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <div class="segmented">
+        {% for code, label in periods %}
+          <a href="?period={{ code }}" class="{% if period == code %}on{% endif %}">{{ label }}</a>
+        {% endfor %}
+      </div>
+      {% if request.user|can:"payroll.manage" %}<a class="btn" href="{% url 'payroll_schemes' %}">Схемы расчёта</a>{% endif %}
+    </div>
+  </div>
+
+  <div class="card" style="padding:4px 0;">
+    <div class="pay-head">
+      <div>Мастер</div><div>Смен</div><div>Визитов</div><div>Выручка</div><div>%</div><div>Премия</div><div>Оклад</div><div>Итого</div>
+    </div>
+    {% for r in rows %}
+      <div class="pay-row">
+        <div class="pay-name">{{ r.employee.full_name }}<div class="pay-sub">{% if r.scheme %}{{ r.scheme.name }}{% else %}<span style="color:var(--status-noshow);">схема не назначена</span>{% endif %}</div></div>
+        <div class="pay-c">{{ r.days }}</div>
+        <div class="pay-c">{{ r.visits }}</div>
+        <div class="pay-c">{{ r.revenue|money }}</div>
+        <div class="pay-c">{{ r.rate|floatformat:0 }}%</div>
+        <div class="pay-c">{{ r.commission|money }}</div>
+        <div class="pay-c">{{ r.base|money }}</div>
+        <div class="pay-c pay-total">{{ r.total|money }} ₽</div>
+      </div>
+    {% empty %}
+      <div class="empty" style="padding:30px;"><div class="big">Нет сотрудников</div></div>
+    {% endfor %}
+    {% if rows %}
+      <div class="pay-foot"><div>Итого к выплате</div><div class="pay-total">{{ total|money }} ₽</div></div>
+    {% endif %}
+  </div>
+
+  <div class="muted" style="font-size:13px; margin-top:14px;">Оклад = оклад за смену × отработанные смены (дни с проведёнными визитами). Премия = выручка × % порога, в который попал оборот.</div>
+{% endblock %}

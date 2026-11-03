@@ -14,36 +14,51 @@
     {% endif %}
   </div>
 
-  {# Редактирование существующих #}
   {% for row in rows %}
-    <form method="post" action="{% url 'staff_edit' row.e.id %}" class="card emp-edit">
+    <form method="post" action="{% url 'staff_edit' row.e.id %}" class="card emp-card">
       {% csrf_token %}
-      <div class="emp-edit-head">
-        <span class="emp-dot" style="background:{{ row.e.color|default:'#0071E3' }};"></span>
-        <strong>{{ row.e.full_name }}</strong>
-        {% if not row.e.is_active %}<span class="tag" style="color:var(--status-noshow);">уволен</span>{% endif %}
-      </div>
-      <div class="grid cols-2" style="gap:12px;">
-        <div class="field"><label>Имя</label><input name="full_name" value="{{ row.e.full_name }}" required></div>
-        <div class="field"><label>Специализация</label><input name="specialization" value="{{ row.e.specialization }}"></div>
-        <div class="field"><label>Телефон</label><input name="phone" value="{{ row.e.phone }}"></div>
-        <div class="field"><label>Цвет в журнале</label><input type="color" name="color" value="{{ row.e.color|default:'#0071E3' }}" style="height:40px; padding:4px;"></div>
-      </div>
-      <div class="field">
-        <label>Рабочие дни {% hint "staff.schedule" %}</label>
-        <div class="day-picker">
-          {% for d, lbl in weekdays %}
-            <label class="day-opt"><input type="checkbox" name="work_days" value="{{ d }}" {% if d in row.work_days %}checked{% endif %}><span>{{ lbl }}</span></label>
-          {% endfor %}
+
+      {# Шапка карточки — сразу видно, чей это блок #}
+      <div class="emp-card-head">
+        <div class="acc-avatar" style="background:{{ row.e.color|default:'#0071E3' }};">{{ row.e.full_name|first|upper }}</div>
+        <div style="flex:1; min-width:0;">
+          <div class="emp-card-name">{{ row.e.full_name }}</div>
+          <div class="sub">{{ row.e.specialization|default:"Без специализации" }}</div>
         </div>
-        <div class="muted" style="font-size:12px; margin-top:4px;">Пусто = работает каждый день.</div>
+        {% if not row.e.is_active %}<span class="tag danger">уволен</span>{% endif %}
       </div>
-      <div style="display:flex; gap:10px; margin-top:4px;">
-        <button class="btn primary" type="submit">Сохранить</button>
-        <button class="btn {% if row.e.is_active %}danger{% endif %}" type="submit" formaction="{% url 'staff_toggle' row.e.id %}"
-                onclick="return confirm('{% if row.e.is_active %}Уволить{% else %}Восстановить{% endif %} {{ row.e.full_name }}?');">
-          {% if row.e.is_active %}Уволить{% else %}Восстановить{% endif %}
-        </button>
+
+      <div class="emp-card-body">
+        <div class="grid cols-2" style="gap:14px;">
+          <div class="field"><label>Имя</label><input name="full_name" value="{{ row.e.full_name }}" required></div>
+          <div class="field"><label>Специализация</label><input name="specialization" value="{{ row.e.specialization }}" placeholder="Мастер маникюра"></div>
+          <div class="field"><label>Телефон</label><input name="phone" value="{{ row.e.phone }}" placeholder="+7…"></div>
+          <div class="field color-field">
+            <label>Цвет в журнале</label>
+            <div class="swatch-row">
+              <input type="color" name="color" value="{{ row.e.color|default:'#0071E3' }}">
+              <span class="muted" style="font-size:13px;">метка мастера в сетке записей</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:4px;">
+          <label>Рабочие дни {% hint "staff.schedule" %}</label>
+          <div class="day-picker">
+            {% for d, lbl in weekdays %}
+              <label class="day-opt"><input type="checkbox" name="work_days" value="{{ d }}" {% if d in row.work_days %}checked{% endif %}><span>{{ lbl }}</span></label>
+            {% endfor %}
+          </div>
+          <div class="muted" style="font-size:12px; margin-top:6px;">Пусто = работает каждый день.</div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+          <button class="btn primary" type="submit">Сохранить</button>
+          <button class="btn {% if row.e.is_active %}danger{% endif %}" type="submit" formaction="{% url 'staff_toggle' row.e.id %}"
+                  onclick="return confirm('{% if row.e.is_active %}Уволить{% else %}Восстановить{% endif %} {{ row.e.full_name }}?');">
+            {% if row.e.is_active %}Уволить{% else %}Восстановить{% endif %}
+          </button>
+        </div>
       </div>
     </form>
   {% empty %}
@@ -57,8 +72,11 @@
       <h3 style="margin-top:0;">Новый сотрудник</h3>
       <div class="field"><label>Имя</label><input name="full_name" required autofocus></div>
       <div class="field"><label>Специализация</label><input name="specialization" placeholder="Мастер маникюра"></div>
-      <div class="field"><label>Телефон</label><input name="phone"></div>
-      <div class="field"><label>Цвет в журнале</label><input type="color" name="color" value="#0071E3" style="height:40px; padding:4px;"></div>
+      <div class="field"><label>Телефон</label><input name="phone" placeholder="+7…"></div>
+      <div class="field color-field">
+        <label>Цвет в журнале</label>
+        <div class="swatch-row"><input type="color" name="color" value="#0071E3"><span class="muted" style="font-size:13px;">метка в сетке</span></div>
+      </div>
       <div class="field">
         <label>Рабочие дни</label>
         <div class="day-picker">
@@ -67,7 +85,7 @@
           {% endfor %}
         </div>
       </div>
-      <div style="display:flex; gap:10px; margin-top:8px;">
+      <div style="display:flex; gap:10px; margin-top:12px;">
         <button class="btn" type="button" onclick="document.getElementById('new-emp').close()">Отмена</button>
         <button class="btn primary" type="submit" style="flex:1; justify-content:center;">Создать</button>
       </div>

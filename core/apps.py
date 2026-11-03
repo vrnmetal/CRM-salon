@@ -12,3 +12,6 @@ class CoreConfig(AppConfig):
         from core import permissions  # noqa: F401
         from core import hints  # noqa: F401
         from core import modules  # noqa: F401
+        # История действий: подключаем сигналы логирования
+        from core import activity
+        activity.connect()

@@ -1,5 +1,5 @@
-{# Строка ростера: цвет, имя, спец., телефон, график, записей сегодня #}
-<div class="emp-row">
+{# Строка ростера: кликабельна → карточка сотрудника с личной статистикой #}
+<a class="emp-row emp-link" href="{% url 'staff_detail' r.e.id %}">
   <span class="emp-dot" style="background:{{ r.e.color|default:'#0071E3' }};"></span>
   <div class="emp-id">
     <div class="title">{{ r.e.full_name }}</div>
@@ -15,5 +15,6 @@
     {% else %}
       <span class="muted" style="font-size:13px;">—</span>
     {% endif %}
+    <span class="emp-go">›</span>
   </div>
-</div>
+</a>

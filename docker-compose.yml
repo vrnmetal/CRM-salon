@@ -3,6 +3,8 @@
 services:
   db:
     image: postgres:16
+    # Сам поднимается после перезагрузки системы / перезапуска Docker.
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-salon}
       POSTGRES_USER: ${DB_USER:-salon}

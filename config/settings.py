@@ -70,6 +70,10 @@ INSTALLED_APPS = [
     "staff",
     "clients",
     "appointments",
+    "payments",
+    "stock",
+    "subscriptions",
+    "payroll",
 ]
 
 

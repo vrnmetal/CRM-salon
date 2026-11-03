@@ -32,13 +32,32 @@ class Command(BaseCommand):
                 "is_active": True,
             },
         )
-        # Включаем модуль «Финансы» демо-тенанту (чтобы пункт был виден)
+        # Включаем модуль «Финансы» демо-тенанту (чтобы пункт был виден) + демо-биллинг
+        from datetime import timedelta
         mods = set(tenant.enabled_modules or [])
-        if "finance" not in mods:
-            mods.add("finance")
-            tenant.enabled_modules = sorted(mods)
-            tenant.save(update_fields=["enabled_modules"])
+        mods.add("finance")
+        mods.add("stock")
+        mods.add("subscriptions")
+        mods.add("payroll")
+        tenant.enabled_modules = sorted(mods)
+        if not tenant.plan:
+            tenant.plan = "Бизнес"
+        if not tenant.paid_until:
+            tenant.paid_until = timezone.localdate() + timedelta(days=30)
+        if not tenant.acquiring_pct:
+            tenant.acquiring_pct = 2  # демо: комиссия эквайринга 2%
+        tenant.save(update_fields=["enabled_modules", "plan", "paid_until", "acquiring_pct"])
         self.stdout.write(("Создан" if created else "Уже есть") + f" тенант: {tenant.name}")
+
+        # Провайдерский админ (control plane над всеми салонами), без тенанта
+        provider, _ = User.objects.get_or_create(
+            username="provider", defaults={"is_provider_admin": True, "tenant": None},
+        )
+        provider.is_provider_admin = True
+        provider.tenant = None
+        provider.set_password("demo12345")
+        provider.save()
+        self.stdout.write("  провайдер: provider / demo12345")
 
         # --- Роли из пресетов ---
         presets = role_presets()
@@ -114,6 +133,33 @@ class Command(BaseCommand):
             services[name] = s
         self.stdout.write(f"  услуг: {len(services)}")
 
+        # Склад: материалы + демо-техкарты (себестоимость → маржа)
+        from stock.models import Material, TechCardItem
+        mats_def = [
+            # name, unit, qty, low, cost, waste_%
+            ("Краска для волос", "мл", 2000, 300, 8, 5),
+            ("Оксид", "мл", 3000, 500, 3, 5),
+            ("Гель-лак", "мл", 500, 100, 20, 8),
+            ("Пилочка одноразовая", "шт", 200, 30, 15, 10),
+        ]
+        mats = {}
+        for mname, unit, qty, low, cost, waste in mats_def:
+            m, _ = Material.objects.get_or_create(
+                name=mname,
+                defaults={"unit": unit, "quantity": qty, "low_threshold": low,
+                          "cost_per_unit": cost, "waste_pct": waste},
+            )
+            mats[mname] = m
+        techcards_def = [
+            ("Окрашивание", [("Краска для волос", 60), ("Оксид", 90)]),
+            ("Маникюр + гель-лак", [("Гель-лак", 5), ("Пилочка одноразовая", 1)]),
+        ]
+        for sname, lines in techcards_def:
+            for mname, qty in lines:
+                TechCardItem.objects.get_or_create(
+                    service=services[sname], material=mats[mname], defaults={"qty": qty})
+        self.stdout.write(f"  материалов: {len(mats)}, техкарт: {len(techcards_def)}")
+
         # Клиенты
         clients_def = [("Анна Кузнецова", "+79160000001"), ("Елена Волкова", "+79160000002"),
                        ("София Романова", "+79160000003")]
@@ -121,6 +167,40 @@ class Command(BaseCommand):
         for cname, phone in clients_def:
             c, _ = Client.objects.get_or_create(phone=phone, defaults={"full_name": cname})
             clients[cname] = c
+
+        # Абонементы/сертификаты: продукты + продажа демо-клиентам
+        from subscriptions.models import ClientSubscription, SubscriptionPlan
+        pkg, _ = SubscriptionPlan.objects.get_or_create(
+            name="10 маникюров",
+            defaults={"kind": SubscriptionPlan.VISITS, "service": services["Маникюр + гель-лак"],
+                      "total_uses": 10, "price": 16000, "validity_days": 180},
+        )
+        cert, _ = SubscriptionPlan.objects.get_or_create(
+            name="Сертификат 5000",
+            defaults={"kind": SubscriptionPlan.MONEY, "value": 5500, "price": 5000, "validity_days": 365},
+        )
+        if not ClientSubscription.objects.exists():
+            ClientSubscription.objects.create(
+                client=clients["Елена Волкова"], plan=cert, name=cert.name,
+                kind=cert.kind, balance=cert.value, status=ClientSubscription.ACTIVE)
+            ClientSubscription.objects.create(
+                client=clients["Анна Кузнецова"], plan=pkg, name=pkg.name,
+                kind=pkg.kind, service=pkg.service, remaining_uses=pkg.total_uses,
+                status=ClientSubscription.ACTIVE)
+            self.stdout.write("  абонементов продано: 2")
+
+        # Зарплаты: схема (оклад + прогрессивные пороги) и назначение мастерам
+        from payroll.models import PayrollScheme, PayrollTier
+        scheme, created_s = PayrollScheme.objects.get_or_create(
+            name="Мастер · стандарт", defaults={"base_per_day": 1500})
+        if created_s:
+            for mn, pct in [(0, 30), (15000, 40), (30000, 50)]:
+                PayrollTier.objects.create(scheme=scheme, min_revenue=mn, pct=pct)
+        for e in employees.values():
+            if e.payroll_scheme_id is None:
+                e.payroll_scheme = scheme
+                e.save(update_fields=["payroll_scheme"])
+        self.stdout.write("  схема ЗП назначена мастерам")
 
         # Записи на сегодня (если ещё не создавали)
         today = timezone.localdate()

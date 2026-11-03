@@ -116,4 +116,13 @@ def client_detail(request, pk):
         "tags": tags,
         "favorite": favorite,
     }
+
+    # Абонементы клиента (если модуль включён)
+    from core.modules import is_module_enabled
+    if is_module_enabled(getattr(request, "tenant", None), "subscriptions"):
+        from subscriptions.models import ClientSubscription
+        context["subs_enabled"] = True
+        context["subscriptions"] = list(
+            ClientSubscription.objects.filter(client=client).order_by("-purchased_at")[:10]
+        )
     return render(request, "clients/detail.html", context)

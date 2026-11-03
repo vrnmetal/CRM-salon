@@ -11,7 +11,7 @@
         <a class="btn" href="?date={{ today }}" style="padding:7px 12px;">Сегодня</a>
         <a class="btn" href="?date={{ next_day }}" style="padding:7px 11px;">›</a>
       </div>
-      <span class="muted" style="font-size:14px;">{{ day|date:"l, j E" }} · {{ total }} зап.</span>
+      <span class="muted" style="font-size:14px;">{{ day|date:"l, j E" }} · {{ total }} {{ total|plural_ru:"запись,записи,записей" }}</span>
     </div>
     {% if request.user|can:"appointment.create" %}
       <a class="btn primary" href="{% url 'appointment_add' %}?date={{ day|date:'Y-m-d' }}">Быстрая запись</a>
@@ -20,7 +20,7 @@
 
   {% if columns %}
     {% comment %}Временная сетка: час = фиксированная высота, запись стоит на своём месте; клик по пустому месту колонки открывает быструю запись у этого мастера на это время (шаг 15 мин).{% endcomment %}
-    <div id="journal" style="display:flex; gap:12px; overflow-x:auto; padding-bottom:6px; position:relative;"
+    <div id="journal" style="display:flex; gap:12px; overflow:auto; padding-bottom:6px; position:relative; max-height:calc(100vh - 170px);"
          data-start="{{ hours.0.label|slice:':2' }}" data-hourpx="{{ hour_px }}" data-header="52" data-height="{{ grid_height }}"
          data-date="{{ day|date:'Y-m-d' }}" data-canadd="{% if request.user|can:'appointment.create' %}1{% else %}0{% endif %}">
 
@@ -37,7 +37,7 @@
 
       {# Линейка времени слева #}
       <div style="flex-shrink:0; width:50px;">
-        <div style="height:52px;"></div>{# отступ под шапки колонок #}
+        <div style="height:52px; position:sticky; top:0; z-index:4; background:var(--bg);"></div>{# отступ под шапки колонок #}
         <div style="position:relative; height:{{ grid_height }}px;">
           {% for h in hours %}
             <div class="tnum" style="position:absolute; top:{{ h.top }}px; right:0; transform:translateY(-50%); font-size:12px; color:var(--text-soft);">{{ h.label }}</div>
@@ -47,9 +47,9 @@
 
       {# Колонки-мастера #}
       {% for col in columns %}
-        <div style="min-width:220px; flex:1;">
-          {# Шапка колонки фиксированной высоты (чтобы сетки совпадали) #}
-          <div style="height:52px; display:flex; align-items:center; gap:9px;">
+        <div style="min-width:240px; flex:1;">
+          {# Шапка колонки — липнет сверху при вертикальном скролле #}
+          <div style="height:52px; display:flex; align-items:center; gap:9px; position:sticky; top:0; z-index:4; background:var(--bg);">
             <span style="width:9px; height:9px; border-radius:50%; background:{{ col.employee.color|default:'#0071E3' }};"></span>
             <div style="line-height:1.15;">
               <div style="font-weight:600; letter-spacing:-0.01em;">{{ col.employee.full_name }}</div>
@@ -75,7 +75,7 @@
                   <span class="dot {{ b.appt.status }}" style="margin-top:4px;"></span>
                 </div>
                 <div style="font-size:14px; color:var(--text); font-weight:500;">{{ b.appt.client.full_name }}</div>
-                {% if b.appt.service %}<div style="font-size:12px; color:var(--text-soft);">{{ b.appt.service.name }}{% if b.appt.extra_count %} +{{ b.appt.extra_count }}{% endif %}</div>{% endif %}
+                {% if b.appt.service and b.show_service %}<div style="font-size:12px; color:var(--text-soft);">{{ b.appt.service.name }}{% if b.appt.extra_count %} +{{ b.appt.extra_count }}{% endif %}</div>{% endif %}
               </a>
             {% endfor %}
           </div>
@@ -106,10 +106,10 @@
 
     grid.addEventListener('mousemove', function (e) {
       var rect = grid.getBoundingClientRect();
-      // y относительно содержимого сетки (с учётом вертикального скролла страницы нет,
-      // но горизонтальный скролл не влияет на y)
-      var y = e.clientY - rect.top;
-      // Активная зона — только тело колонок (под шапками)
+      var visibleY = e.clientY - rect.top;          // позиция в видимой области панели
+      // Над липкой шапкой — не подсвечиваем
+      if (visibleY < headerPx) { line.style.display = 'none'; bubble.style.display = 'none'; return; }
+      var y = visibleY + grid.scrollTop;            // позиция в содержимом (с учётом внутр. скролла)
       if (y < headerPx || y > headerPx + heightPx) { line.style.display = 'none'; bubble.style.display = 'none'; return; }
       line.style.top = y + 'px'; line.style.display = 'block';
       // Время по позиции

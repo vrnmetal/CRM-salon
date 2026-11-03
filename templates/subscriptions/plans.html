@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Абонементы · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1 class="display" style="margin:0;">Абонементы и сертификаты</h1>
+      <div class="muted" style="font-size:14px; margin-top:4px;">Продукты предоплаты. Продаёшь клиенту — списываешь при визите.</div>
+    </div>
+    {% if request.user|can:"subscription.manage" %}
+      <button class="btn primary" type="button" onclick="document.getElementById('new-plan').showModal()">Новый продукт</button>
+    {% endif %}
+  </div>
+
+  <div class="card" style="padding:6px 0;">
+    {% for p in plans %}
+      <div class="emp-row" style="grid-template-columns:auto 1fr auto auto;">
+        <span class="emp-dot" style="background:{% if p.is_active %}var(--status-came){% else %}var(--text-muted){% endif %};"></span>
+        <div class="emp-id">
+          <div class="title">{{ p.name }}{% if not p.is_active %} <span class="muted" style="font-size:12px;">(выкл)</span>{% endif %}</div>
+          <div class="sub">
+            {% if p.kind == 'visits' %}Пакет: {{ p.total_uses }} визит.{% if p.service %} · {{ p.service.name }}{% else %} · любая услуга{% endif %}
+            {% else %}Сертификат: баланс {{ p.value|money }} ₽{% if p.bonus %} (бонус {{ p.bonus|money }} ₽){% endif %}{% endif %}
+            {% if p.validity_days %} · {{ p.validity_days }} дн.{% endif %}
+          </div>
+        </div>
+        <div class="emp-meta"><span class="tag">{{ p.price|money }} ₽</span></div>
+        <div class="emp-meta">
+          {% if request.user|can:"subscription.manage" %}
+            <form method="post" action="{% url 'subs_plan_toggle' p.id %}">{% csrf_token %}
+              <button class="btn" type="submit" style="padding:5px 10px;">{% if p.is_active %}Выкл{% else %}Вкл{% endif %}</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    {% empty %}
+      <div class="empty" style="padding:30px;"><div class="big">Нет продуктов</div>Создайте абонемент или сертификат.</div>
+    {% endfor %}
+  </div>
+
+  {% if request.user|can:"subscription.manage" %}
+  <dialog id="new-plan" class="modal">
+    <form method="post" action="{% url 'subs_plan_create' %}">
+      {% csrf_token %}
+      <h3 style="margin-top:0;">Новый продукт</h3>
+      <div class="field"><label>Название</label><input name="name" required autofocus placeholder="10 маникюров / Сертификат 5000"></div>
+      <div class="field"><label>Тип</label>
+        <select name="kind" id="plan-kind" onchange="document.getElementById('pk-visits').style.display=this.value=='visits'?'block':'none';document.getElementById('pk-money').style.display=this.value=='money'?'block':'none';">
+          <option value="visits">Пакет визитов</option>
+          <option value="money">Сертификат на сумму</option>
+        </select>
+      </div>
+      <div id="pk-visits">
+        <div class="grid cols-2" style="gap:12px;">
+          <div class="field"><label>Визитов в пакете</label><input name="total_uses" type="number" min="0" value="10"></div>
+          <div class="field"><label>Услуга (пусто = любая)</label>
+            <select name="service"><option value="">Любая</option>{% for s in services %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select>
+          </div>
+        </div>
+      </div>
+      <div id="pk-money" style="display:none;">
+        <div class="field"><label>Зачислить на баланс, ₽</label><input name="value" type="number" step="0.01" value="0" placeholder="напр. 5500 за цену 5000"></div>
+      </div>
+      <div class="grid cols-2" style="gap:12px;">
+        <div class="field"><label>Цена продажи, ₽</label><input name="price" type="number" step="0.01" value="0" required></div>
+        <div class="field"><label>Срок, дней (0 = бессрочно)</label><input name="validity_days" type="number" min="0" value="0"></div>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:8px;">
+        <button class="btn" type="button" onclick="document.getElementById('new-plan').close()">Отмена</button>
+        <button class="btn primary" type="submit" style="flex:1; justify-content:center;">Создать</button>
+      </div>
+    </form>
+  </dialog>
+  {% endif %}
+{% endblock %}

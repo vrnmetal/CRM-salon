@@ -5,17 +5,136 @@
 Принцип «iPhone, а не Android»: открыл — сразу то, что нужно твоей роли, без
 поиска и настройки. Сложное — за кнопкой, не в лицо.
 """
+import secrets as _secrets
+
 from django.contrib import messages
+from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.hashers import check_password, make_password
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from core import totp
 from core.forms import AccountCreateForm, BrandingForm
 from core.models import Role, User
 from core.permissions import REGISTRY, has_perm, requires, requires_any
+
+
+# ============================================================================
+# Вход с двухфакторной аутентификацией (TOTP)
+# ============================================================================
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect("home")
+    form = AuthenticationForm(request, data=request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        user = form.get_user()
+        if getattr(user, "totp_enabled", False):
+            # Пароль верный, но нужен второй фактор — полноценно НЕ логиним
+            request.session["pre_2fa_user"] = user.id
+            request.session["pre_2fa_next"] = request.GET.get("next") or ""
+            return redirect("login_2fa")
+        auth_login(request, user)
+        return redirect(request.GET.get("next") or "home")
+    return render(request, "core/login.html", {"form": form})
+
+
+def login_2fa(request):
+    uid = request.session.get("pre_2fa_user")
+    if not uid:
+        return redirect("login")
+    user = User.objects.filter(pk=uid).first()
+    if user is None:
+        request.session.pop("pre_2fa_user", None)
+        return redirect("login")
+
+    error = None
+    if request.method == "POST":
+        code = (request.POST.get("code") or "").strip()
+        ok = totp.verify(user.totp_secret, code)
+        if not ok:
+            # Пробуем как резервный код (одноразовый)
+            norm = code.upper().replace(" ", "").replace("-", "")
+            for h in list(user.backup_codes or []):
+                if check_password(norm, h):
+                    user.backup_codes.remove(h)
+                    user.save(update_fields=["backup_codes"])
+                    ok = True
+                    break
+        if ok:
+            nxt = request.session.pop("pre_2fa_next", "") or "home"
+            request.session.pop("pre_2fa_user", None)
+            auth_login(request, user)
+            return redirect(nxt)
+        error = "Неверный код."
+    return render(request, "core/login_2fa.html", {"error": error})
+
+
+def _gen_backup_codes(n=8):
+    """Генерирует n кодов вида AB12-CD34; возвращает (plain_list, hash_list)."""
+    plain, hashes = [], []
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    for _ in range(n):
+        raw = "".join(_secrets.choice(alphabet) for _ in range(8))
+        plain.append(raw[:4] + "-" + raw[4:])
+        hashes.append(make_password(raw))
+    return plain, hashes
+
+
+@login_required
+def security_2fa(request):
+    user = request.user
+    if not getattr(user, "is_provider_admin", False):
+        raise PermissionDenied("2FA доступна провайдерским аккаунтам.")
+
+    plain_codes = None
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "confirm":
+            if totp.verify(user.totp_secret, request.POST.get("code")):
+                plain, hashes = _gen_backup_codes()
+                user.totp_enabled = True
+                user.backup_codes = hashes
+                user.save(update_fields=["totp_enabled", "backup_codes"])
+                plain_codes = plain
+                messages.success(request, "2FA включена. Сохраните резервные коды.")
+            else:
+                messages.error(request, "Неверный код — попробуйте ещё раз.")
+        elif action == "disable":
+            user.totp_enabled = False
+            user.totp_secret = ""
+            user.backup_codes = []
+            user.save(update_fields=["totp_enabled", "totp_secret", "backup_codes"])
+            messages.info(request, "2FA отключена.")
+            return redirect("security_2fa")
+        elif action == "regen" and user.totp_enabled:
+            plain, hashes = _gen_backup_codes()
+            user.backup_codes = hashes
+            user.save(update_fields=["backup_codes"])
+            plain_codes = plain
+            messages.success(request, "Резервные коды перевыпущены.")
+        elif action == "reset_secret":
+            user.totp_secret = ""
+            user.totp_enabled = False
+            user.save(update_fields=["totp_secret", "totp_enabled"])
+            return redirect("security_2fa")
+
+    # Если не включено и нет секрета — генерируем секрет для привязки
+    if not user.totp_enabled and not user.totp_secret:
+        user.totp_secret = totp.generate_secret()
+        user.save(update_fields=["totp_secret"])
+
+    uri = totp.provisioning_uri(user.totp_secret, user.username) if user.totp_secret else ""
+    return render(request, "core/security_2fa.html", {
+        "two_fa": user.totp_enabled, "secret": user.totp_secret,
+        "uri": uri, "plain_codes": plain_codes,
+        "backup_left": len(user.backup_codes or []),
+    })
 
 
 # --- Сквозной поиск: клиенты, сотрудники, услуги — с группами «где найдено» ---
@@ -65,9 +184,9 @@ def global_search(request):
 @login_required
 def home(request):
     user = request.user
-    # Провайдерский админ — в свою панель (заглушка)
-    if getattr(user, "is_provider_admin", False):
-        return render(request, "core/provider_home.html")
+    # Провайдерский админ (НЕ в режиме impersonation) — в свою панель
+    if getattr(user, "is_provider_admin", False) and getattr(request, "impersonator", None) is None:
+        return redirect("provider_home")
     # Есть право на дашборд (собственник) — дашборд как главная
     if has_perm(user, "dashboard.view"):
         return redirect("dashboard")
@@ -111,7 +230,7 @@ def dashboard(request):
     today_appts = A.objects.filter(start__date=today)
     booked_min = today_appts.exclude(status=A.STATUS_NOSHOW).aggregate(s=Sum("duration_min"))["s"] or 0
     masters = Employee.objects.count()
-    work_min = masters * (22 - 9) * 60  # рабочее окно журнала 9–22
+    work_min = masters * (23 - 8) * 60  # рабочее окно журнала 8–23
     load = round(100 * booked_min / work_min) if work_min else 0
     free_hours = max(0, (work_min - booked_min)) // 60
 
@@ -340,6 +459,35 @@ def branding_settings(request):
             "font_preset": tenant.font_preset,
         })
     return render(request, "core/branding.html", {"form": form, "tenant": tenant})
+
+
+# --- История действий (с отменой) ---
+@login_required
+@requires("history.view")
+def history(request):
+    from core.activity import human_model
+    from core.models import ActivityLog
+
+    entries = ActivityLog.objects.select_related("actor", "undone_by")[:200]
+    rows = []
+    for e in entries:
+        rows.append({"e": e, "model": human_model(e.model_label)})
+    return render(request, "core/history.html", {
+        "rows": rows, "can_undo": has_perm(request.user, "history.undo"),
+    })
+
+
+@login_required
+@requires("history.undo")
+@require_POST
+def history_undo(request, pk):
+    from core.activity import undo
+    from core.models import ActivityLog
+
+    entry = get_object_or_404(ActivityLog, pk=pk)
+    ok, msg = undo(entry, request.user)
+    (messages.success if ok else messages.error)(request, msg)
+    return redirect("history")
 
 
 # --- Тумблер подсказок в профиле (вкл/выкл для текущего пользователя) ---

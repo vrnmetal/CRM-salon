@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Тех. карты · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'stock_home' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">Тех. карты</h1>
+      <div class="muted" style="font-size:14px; margin-top:4px;">Расход материалов на услугу → себестоимость и маржа. Заполнил — списывается само.</div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:6px 0;">
+    {% for r in rows %}
+      <a class="emp-row emp-link" href="{% url 'service_card' r.s.id %}" style="grid-template-columns:1fr auto auto auto;">
+        <div class="emp-id">
+          <div class="title">{{ r.s.name }}</div>
+          <div class="sub">{% if r.items %}{{ r.items }} позиц.{% if r.possible != None %} · запаса на {{ r.possible }} процедур{% endif %}{% else %}тех. карта не заполнена{% endif %}</div>
+        </div>
+        <div class="emp-meta"><span class="muted" style="font-size:13px;">цена {{ r.s.price|floatformat:0 }} ₽</span></div>
+        <div class="emp-meta"><span class="muted" style="font-size:13px;">себест. {{ r.cost|money }} ₽</span></div>
+        <div class="emp-meta">
+          <span class="tag" style="color:{% if r.margin >= 0 %}var(--status-came){% else %}var(--status-noshow){% endif %};">маржа {{ r.margin|money }} ₽</span>
+          <span class="emp-go">›</span>
+        </div>
+      </a>
+    {% empty %}
+      <div class="empty" style="padding:30px;"><div class="big">Нет услуг</div>Добавьте услуги в разделе «Услуги».</div>
+    {% endfor %}
+  </div>
+{% endblock %}

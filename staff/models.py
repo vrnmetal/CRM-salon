@@ -24,6 +24,11 @@ class Employee(TenantModel):
     )
     # Порядок в журнале
     sort_order = models.IntegerField("Порядок", default=100)
+    # Схема расчёта зарплаты (модуль payroll). Пусто = ЗП не считается.
+    payroll_scheme = models.ForeignKey(
+        "payroll.PayrollScheme", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="employees", verbose_name="Схема ЗП",
+    )
 
     class Meta:
         verbose_name = "Сотрудник"

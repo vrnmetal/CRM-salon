@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}История · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1 class="display" style="margin:0;">История действий</h1>
+      <div class="muted" style="font-size:14px; margin-top:4px;">Кто что менял. Любое действие можно отменить.</div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:6px 0;">
+    {% for r in rows %}
+      <div class="hist-row{% if r.e.undone %} hist-undone{% endif %}">
+        <span class="hist-dot hist-{{ r.e.action }}"></span>
+        <div class="hist-main">
+          <div class="hist-title">{{ r.e.get_action_display }} · {{ r.model }}
+            <span class="muted" style="font-weight:400;">— {{ r.e.object_repr }}</span>
+          </div>
+          <div class="hist-sub">
+            {% if r.e.actor %}{{ r.e.actor.username }}{% endif %} · {{ r.e.created_at|date:"d.m.Y H:i" }}
+            {% if r.e.undone %} · <span style="color:var(--status-noshow);">отменено{% if r.e.undone_by %} · {{ r.e.undone_by.username }}{% endif %}</span>{% endif %}
+          </div>
+        </div>
+        {% if can_undo and not r.e.undone %}
+          <form method="post" action="{% url 'history_undo' r.e.id %}" onsubmit="return confirm('Отменить это действие?');">
+            {% csrf_token %}
+            <button class="btn" type="submit">Отменить</button>
+          </form>
+        {% endif %}
+      </div>
+    {% empty %}
+      <div class="empty" style="padding:40px;"><div class="big">История пуста</div>Действия сотрудников появятся здесь.</div>
+    {% endfor %}
+  </div>
+{% endblock %}

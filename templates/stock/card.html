@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Тех. карта · {{ service.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'techcards' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">Тех. карта · {{ service.name }}</h1>
+    </div>
+  </div>
+
+  <div class="grid cols-2" style="align-items:start;">
+    <div class="card">
+      <h3 style="margin-top:0;">Расход материалов</h3>
+      {% for r in rows %}
+        <div class="fin-row">
+          <div class="fin-name">{{ r.it.material.name }}
+            <div class="fin-sub">{{ r.it.qty|floatformat:2 }} {{ r.it.material.unit }}{% if r.it.material.waste_pct %} +{{ r.it.material.waste_pct|floatformat:0 }}% потерь = {{ r.it.effective_qty|floatformat:2 }}{% endif %} × {{ r.it.material.cost_per_unit|floatformat:0 }} ₽ · остаток {{ r.it.material.quantity|floatformat:0 }} {{ r.it.material.unit }}{% if r.cap != None %} → на {{ r.cap }} процедур{% endif %}</div>
+          </div>
+          <div class="fin-sum">{{ r.it.line_cost|floatformat:0 }} ₽</div>
+          {% if request.user|can:"techcard.edit" %}
+          <form method="post" style="margin-left:10px;">{% csrf_token %}
+            <input type="hidden" name="action" value="remove"><input type="hidden" name="item" value="{{ r.it.id }}">
+            <button class="btn danger" type="submit" style="padding:5px 9px;">✕</button>
+          </form>
+          {% endif %}
+        </div>
+      {% empty %}
+        <div class="empty" style="padding:22px;">Пока пусто. Добавьте материалы справа.</div>
+      {% endfor %}
+
+      {% if possible != None %}
+        <div style="display:flex; justify-content:space-between; padding-top:12px; margin-top:8px; border-top:1px solid var(--border);">
+          <span style="font-weight:500;">Запаса хватит на</span>
+          <span class="fin-sum" style="color:{% if possible > 0 %}var(--status-came){% else %}var(--status-noshow){% endif %};">{{ possible }} процедур</span>
+        </div>
+      {% endif %}
+      <div style="display:flex; justify-content:space-between; padding-top:{% if possible != None %}8{% else %}12{% endif %}px;{% if possible == None %} margin-top:8px; border-top:1px solid var(--border);{% endif %}">
+        <span class="muted">Себестоимость</span><span class="fin-sum">{{ cost|money }} ₽</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding-top:8px;">
+        <span style="font-weight:500;">Маржа (цена {{ service.price|floatformat:0 }} ₽)</span>
+        <span class="fin-sum" style="color:{% if margin >= 0 %}var(--status-came){% else %}var(--status-noshow){% endif %};">{{ margin|money }} ₽</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0;">Добавить материал</h3>
+      {% if request.user|can:"techcard.edit" %}
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add">
+          <div class="field"><label>Материал</label>
+            <select name="material" required>
+              <option value="">— выберите —</option>
+              {% for m in materials %}<option value="{{ m.id }}">{{ m.name }} ({{ m.cost_per_unit|floatformat:0 }} ₽/{{ m.unit }})</option>{% endfor %}
+            </select>
+          </div>
+          <div class="field"><label>Расход на одну услугу</label><input name="qty" type="number" step="0.01" min="0" required placeholder="напр. 60"></div>
+          <button class="btn primary" type="submit" style="width:100%; justify-content:center;">Добавить в карту</button>
+        </form>
+        <div class="muted" style="font-size:12px; margin-top:10px;">Материалов нет в списке? Заведите их в разделе «Склад».</div>
+      {% else %}
+        <div class="muted" style="font-size:14px;">Нет права на редактирование тех. карт.</div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

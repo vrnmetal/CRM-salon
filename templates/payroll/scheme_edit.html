@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}{{ scheme.name }} · Схема ЗП{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'payroll_schemes' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">{{ scheme.name }}</h1>
+    </div>
+  </div>
+
+  {# Название + оклад #}
+  <div class="card" style="max-width:640px; margin-bottom:16px;">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      <div class="grid cols-2" style="gap:14px;">
+        <div class="field"><label>Название</label><input name="name" value="{{ scheme.name }}" required></div>
+        <div class="field"><label>Оклад за смену, ₽</label><input name="base_per_day" type="number" step="0.01" value="{{ scheme.base_per_day|floatformat:0 }}"></div>
+      </div>
+      <button class="btn primary" type="submit">Сохранить</button>
+    </form>
+  </div>
+
+  {# Пороги прогрессии #}
+  <div class="card" style="max-width:640px; margin-bottom:16px;">
+    <h3 style="margin-top:0;">Пороги прогрессии</h3>
+    <div class="muted" style="font-size:13px; margin-bottom:10px;">С какой выручки за период действует какой процент.</div>
+    <div class="tier-list">
+      {% for t in scheme.tiers.all %}
+        <div class="tier-row">
+          <span class="tier-from">выручка от <b>{{ t.min_revenue|money }} ₽</b></span>
+          <span class="tier-arrow">→</span>
+          <span class="tier-pct">{{ t.pct|floatformat:0 }}%</span>
+          <form method="post">{% csrf_token %}
+            <input type="hidden" name="action" value="tier_remove"><input type="hidden" name="tier" value="{{ t.id }}">
+            <button class="btn danger" type="submit" style="padding:4px 9px;" title="Удалить порог">✕</button>
+          </form>
+        </div>
+      {% empty %}
+        <div class="muted" style="font-size:13px; padding:10px 14px;">Порогов нет — премия не начисляется.</div>
+      {% endfor %}
+    </div>
+
+    <form method="post" class="tier-add">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="tier_add">
+      <div class="tier-add-title">Добавить порог</div>
+      <div class="tier-add-fields">
+        <label>Выручка от, ₽<input name="min_revenue" type="number" step="0.01" placeholder="напр. 15000"></label>
+        <label>Ставка, %<input name="pct" type="number" step="0.01" placeholder="напр. 40"></label>
+        <button class="btn primary" type="submit">Добавить</button>
+      </div>
+    </form>
+  </div>
+
+  {# Удаление схемы #}
+  <form method="post" onsubmit="return confirm('Удалить схему «{{ scheme.name }}»?');">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="delete">
+    <button class="btn danger" type="submit">Удалить схему</button>
+  </form>
+{% endblock %}

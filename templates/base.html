@@ -6,7 +6,7 @@
   <title>{% block title %}{{ brand.name|default:"Салон" }}{% endblock %}</title>
 
   {# Единый дизайн-файл. ?v — поднимать при каждой правке app.css (кэш). #}
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=35">
   {# Календарь/часы — свои окна вместо системных (flatpickr, локально) #}
   <link rel="stylesheet" href="{% static 'vendor/flatpickr/flatpickr.min.css' %}">
   <link rel="stylesheet" href="{% static 'css/flatpickr-theme.css' %}?v=1">
@@ -21,6 +21,14 @@
   {% endif %}
 </head>
 <body>
+{% if request.impersonator %}
+  <div class="imp-banner">
+    <span>Вы вошли как салон <b>{{ brand.name|default:request.user.tenant.name }}</b> (impersonation). Действия пишутся в аудит.</span>
+    <form method="post" action="{% url 'provider_impersonate_stop' %}" style="margin:0;">{% csrf_token %}
+      <button class="btn" type="submit">Выйти из салона</button>
+    </form>
+  </div>
+{% endif %}
 <div class="layout">
 
   {# --- Левый сайдбар: бренд салона + навигация по правам --- #}
@@ -36,6 +44,17 @@
     </a>
 
     <nav class="nav">
+      {% if request.user.is_provider_admin and not request.impersonator %}
+        <a href="{% url 'provider_home' %}" class="{% if request.resolver_match.url_name == 'provider_home' or request.resolver_match.url_name == 'provider_tenant' or request.resolver_match.url_name == 'provider_tenant_create' %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 13h2M8 16h6"/></svg>
+          Тенанты</a>
+        <a href="{% url 'provider_audit' %}" class="{% if request.resolver_match.url_name == 'provider_audit' %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><path d="M4 5h16M4 10h16M4 15h10M4 20h7"/></svg>
+          Аудит</a>
+        <a href="{% url 'security_2fa' %}" class="{% if request.resolver_match.url_name == 'security_2fa' %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          Безопасность</a>
+      {% endif %}
       {% if request.user|can:"dashboard.view" %}
         <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
@@ -66,9 +85,33 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><path d="M3 7h18v12H3zM3 11h18M7 15h4"/></svg>
           Финансы</a>
       {% endif %}
+      {% if request.user|can:"payroll.view" %}
+        <a href="{% url 'payroll_home' %}" class="{% if 'payroll' in request.resolver_match.url_name %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5a2.5 2 0 0 1 5 0c0 2-5 1-5 3a2.5 2 0 0 0 5 0"/></svg>
+          Зарплаты</a>
+      {% endif %}
+      {% if request.user|can:"stock.view" %}
+        <a href="{% url 'stock_home' %}" class="{% if request.resolver_match.url_name == 'stock_home' or request.resolver_match.url_name == 'techcards' or request.resolver_match.url_name == 'service_card' %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><path d="M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7M12 11v10"/></svg>
+          Склад</a>
+      {% endif %}
+      {% if request.user|can:"subscription.view" %}
+        <a href="{% url 'subs_plans' %}" class="{% if request.resolver_match.url_name == 'subs_plans' or request.resolver_match.url_name == 'subs_sell' %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20M6 14h4"/></svg>
+          Абонементы</a>
+      {% endif %}
     </nav>
 
     <div class="spacer"></div>
+
+    {# История действий — внизу, сразу над настройками #}
+    {% if request.user|can:"history.view" %}
+      <nav class="nav">
+        <a href="{% url 'history' %}" class="{% if request.resolver_match.url_name == 'history' %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><path d="M3 12a9 9 0 1 0 3-6.7M3 5v4h4M12 7v5l3 2"/></svg>
+          История</a>
+      </nav>
+    {% endif %}
 
     {# Настройки — внизу сайдбара (как в сервисной CRM), отдельно от основного меню #}
     {% if request.user|can:"access.manage" or request.user|can:"account.manage" or request.user|can:"branding.manage" %}
@@ -82,12 +125,18 @@
     <div class="foot">
       {% if user.is_authenticated %}
         {{ user.username }}{% if user.role %} · {{ user.role.name }}{% endif %}<br>
-        {# Тумблер подсказок в профиле пользователя #}
-        <form method="post" action="{% url 'toggle_hints' %}">
-          {% csrf_token %}
-          <button class="link" type="submit">Подсказки: {% if show_hints %}вкл{% else %}выкл{% endif %}</button>
-        </form>
-        · <a href="{% url 'logout' %}">Выйти</a>
+        {# Тумблер подсказок + выход (logout только POST в Django 6) #}
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <form method="post" action="{% url 'toggle_hints' %}" style="margin:0;">
+            {% csrf_token %}
+            <button class="link" type="submit">Подсказки: {% if show_hints %}вкл{% else %}выкл{% endif %}</button>
+          </form>
+          <span>·</span>
+          <form method="post" action="{% url 'logout' %}" style="margin:0;">
+            {% csrf_token %}
+            <button class="link" type="submit">Выйти</button>
+          </form>
+        </div>
       {% endif %}
     </div>
   </aside>

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Схемы ЗП · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'payroll_home' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">Схемы расчёта</h1>
+    </div>
+    <a class="btn primary" href="{% url 'payroll_scheme_new' %}">Новая схема</a>
+  </div>
+
+  {# Список схем — строками #}
+  <div class="section-label">Схемы расчёта</div>
+  <div class="card" style="padding:6px 0; margin-bottom:28px;">
+    {% for s in schemes %}
+      <a class="emp-row emp-link" href="{% url 'payroll_scheme_edit' s.id %}" style="grid-template-columns:1fr auto auto auto;">
+        <div class="emp-id">
+          <div class="title">{{ s.name }}</div>
+          <div class="sub">{{ s.ntiers }} порог.</div>
+        </div>
+        <div class="emp-meta"><span class="muted" style="font-size:13px;">оклад {{ s.base_per_day|money }} ₽/смена</span></div>
+        <div class="emp-meta">{% if not s.is_active %}<span class="muted" style="font-size:12px;">выкл</span>{% endif %}</div>
+        <div class="emp-meta"><span class="btn" style="padding:6px 12px;">Редактировать</span><span class="emp-go">›</span></div>
+      </a>
+    {% empty %}
+      <div class="empty" style="padding:30px;"><div class="big">Нет схем</div>Нажмите «Новая схема».</div>
+    {% endfor %}
+  </div>
+
+  {# Сотрудники и их схемы — отдельный блок #}
+  <div class="section-label">Сотрудники и их схемы</div>
+  <div class="card" style="padding:6px 0;">
+    {% for e in employees %}
+      <div class="emp-row" style="grid-template-columns:1fr auto auto;">
+        <div class="emp-id">
+          <div class="title">{{ e.full_name }}</div>
+          <div class="sub">{{ e.specialization|default:"—" }}</div>
+        </div>
+        <div class="emp-meta">
+          {% if e.payroll_scheme %}<span class="tag">{{ e.payroll_scheme.name }}</span>
+          {% else %}<span class="muted" style="font-size:13px; color:var(--status-noshow);">без схемы</span>{% endif %}
+        </div>
+        <div class="emp-meta"><a class="btn" href="{% url 'payroll_assign' e.id %}" style="padding:6px 12px;">Изменить</a></div>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}

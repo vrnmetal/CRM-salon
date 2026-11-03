@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}{{ e.full_name }} · Сотрудник{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'staff_list' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <div style="display:flex; align-items:center; gap:11px; margin-top:2px;">
+        <span class="emp-dot" style="width:14px; height:14px; background:{{ e.color|default:'#0071E3' }};"></span>
+        <h1 class="display" style="margin:0;">{{ e.full_name }}</h1>
+      </div>
+      <div class="muted" style="font-size:14px; margin-top:4px;">
+        {{ e.specialization|default:"Сотрудник" }}{% if e.phone %} · {{ e.phone }}{% endif %}{% if not e.is_active %} · <span style="color:var(--status-noshow);">уволен</span>{% endif %}
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <div class="segmented">
+        {% for code, label in periods %}
+          <a href="?period={{ code }}" class="{% if period == code %}on{% endif %}">{{ label }}</a>
+        {% endfor %}
+      </div>
+      {% if can_manage %}<a class="btn" href="{% url 'staff_manage' %}">Изменить</a>{% endif %}
+    </div>
+  </div>
+
+  {# Ключевые личные показатели #}
+  <div class="grid auto" style="margin-bottom:16px;">
+    <div class="tile"><div class="label">Выручка с мастера</div><div class="value">{{ revenue|money }}&nbsp;₽</div></div>
+    <div class="tile"><div class="label">Клиентов принято</div><div class="value">{{ clients }}</div><div class="delta flat">{{ visits }} {{ visits|plural_ru:"визит,визита,визитов" }}</div></div>
+    <div class="tile"><div class="label">Средний чек</div><div class="value">{{ avg_check|money }}&nbsp;₽</div></div>
+    <div class="tile"><div class="label">Отработано часов</div><div class="value">{{ hours }}</div><div class="delta flat">смен по графику: {{ scheduled_days }}</div></div>
+  </div>
+
+  <div class="grid cols-2" style="align-items:start;">
+    {# Доп. продажи + деньги/ЗП #}
+    <div class="card">
+      <h3 style="margin-top:0;">Продажи</h3>
+      <div class="fin-row"><div class="fin-name">Доп. услуги (сверх первой)</div><div class="fin-sub">{{ extra_count }} шт</div><div class="fin-sum">{{ extra_sum|money }} ₽</div></div>
+      <div class="fin-row"><div class="fin-name">Всего денег с мастера</div><div class="fin-sub">{{ visits }} виз.</div><div class="fin-sum">{{ revenue|money }} ₽</div></div>
+      <div class="fin-row"><div class="fin-name">Неявки</div><div class="fin-sub">упущено</div><div class="fin-sum" style="color:var(--status-noshow);">{{ noshow }}</div></div>
+      <div class="fin-row">
+        <div class="fin-name">ЗП (оценка {{ commission_pct }}%) {% hint "staff.salary" %}</div>
+        <div class="fin-sub">предв.</div>
+        <div class="fin-sum">{{ salary_est|money }} ₽</div>
+      </div>
+      <div class="muted" style="font-size:12px; margin-top:8px;">ЗП — предварительная оценка по единой ставке. Точный расчёт появится в модуле «Расчёт зарплат».</div>
+    </div>
+
+    {# График + топ услуг #}
+    <div>
+      <div class="card" style="margin-bottom:16px;">
+        <h3 style="margin-top:0;">Рабочие дни</h3>
+        {% if work_days %}
+          <div class="day-picker" style="pointer-events:none;">
+            {% for lbl in work_days %}<span class="day-chip" style="font-size:13px; padding:4px 10px;">{{ lbl }}</span>{% endfor %}
+          </div>
+        {% else %}
+          <div class="muted" style="font-size:14px;">График не задан — считается, что работает каждый день.</div>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0;">Топ услуг</h3>
+        {% for name, cnt in top_services %}
+          <div class="fin-row"><div class="fin-name">{{ name }}</div><div class="fin-sub"></div><div class="fin-sum">×{{ cnt }}</div></div>
+        {% empty %}
+          <div class="empty" style="padding:22px;">Нет проведённых услуг за период.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

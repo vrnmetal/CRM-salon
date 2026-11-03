@@ -14,10 +14,21 @@
   </div>
 
   <div class="card" style="max-width:520px;">
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-      <span class="dot {{ a.status }}"></span>
-      <span style="font-weight:500;">{{ a.get_status_display }}</span>
-      <span class="muted" style="margin-left:auto;">{{ a.start|date:"j E, H:i" }} · {{ a.duration_min }} мин</span>
+    <div style="margin-bottom:18px;">
+      <div class="muted" style="font-size:13px; margin-bottom:6px;">{{ a.start|date:"j E, H:i" }} · {{ a.duration_min }} мин</div>
+      {% if request.user|can:"appointment.edit" %}
+        <div class="status-switch">
+          {% for val, label in statuses %}
+            <form method="post" action="{% url 'appointment_set_status' a.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="status" value="{{ val }}">
+              <button class="st-btn st-{{ val }}{% if a.status == val %} on{% endif %}" type="submit">{{ label }}</button>
+            </form>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="display:flex; align-items:center; gap:10px;"><span class="dot {{ a.status }}"></span><span style="font-weight:500;">{{ a.get_status_display }}</span></div>
+      {% endif %}
     </div>
 
     <table style="width:100%; font-size:14px;">
@@ -48,6 +59,110 @@
         <span class="tnum" style="font-weight:600; font-size:17px;">{{ a.price|floatformat:0 }} ₽</span>
       </div>
     </div>
+
+    {# --- Расход материалов по записи (разовая корректировка тех. карты) --- #}
+    {% if stock_enabled and request.user|can:"stock.manage" %}
+      <div style="border-top:1px solid var(--border); margin-top:12px; padding-top:14px;">
+        <div class="muted" style="font-size:13px; margin-bottom:8px;">Расход материалов по записи {% hint "stock.waste" %}</div>
+        {% if written_off %}
+          {% for om in appt_materials %}
+            <div style="display:flex; justify-content:space-between; font-size:14px; padding:3px 0;">
+              <span>{{ om.material.name }}</span><span class="muted">{{ om.qty|floatformat:2 }} {{ om.material.unit }}</span>
+            </div>
+          {% endfor %}
+          <div class="muted" style="font-size:12px; margin-top:6px;">Материалы уже списаны со склада (визит проведён).</div>
+        {% else %}
+          {% for om in appt_materials %}
+            <div style="display:flex; gap:8px; align-items:center; padding:4px 0;">
+              <span style="flex:1;">{{ om.material.name }}</span>
+              <form method="post" action="{% url 'appt_mat_set' a.id %}" class="inline-form" style="flex:0 0 auto;">
+                {% csrf_token %}
+                <input type="hidden" name="material" value="{{ om.material.id }}">
+                <input name="qty" type="number" step="0.01" value="{{ om.qty|floatformat:2 }}" style="width:90px;">
+                <button class="btn" type="submit">ОК</button>
+              </form>
+              <form method="post" action="{% url 'appt_mat_remove' om.id %}">{% csrf_token %}
+                <button class="btn danger" type="submit" style="padding:5px 9px;">✕</button>
+              </form>
+            </div>
+          {% endfor %}
+
+          <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+            {% if not appt_materials %}
+              <form method="post" action="{% url 'appt_fill' a.id %}">{% csrf_token %}
+                <button class="btn" type="submit">Заполнить из тех. карт</button>
+              </form>
+            {% endif %}
+            <form method="post" action="{% url 'appt_mat_set' a.id %}" class="inline-form" style="flex:1; min-width:260px;">
+              {% csrf_token %}
+              <select name="material" style="flex:1;">
+                <option value="">+ материал…</option>
+                {% for m in stock_materials %}<option value="{{ m.id }}">{{ m.name }} ({{ m.unit }})</option>{% endfor %}
+              </select>
+              <input name="qty" type="number" step="0.01" placeholder="кол-во" style="flex:0 0 90px;">
+              <button class="btn" type="submit">Добавить</button>
+            </form>
+          </div>
+          <div class="muted" style="font-size:12px; margin-top:6px;">Списывается со склада, когда поставишь статус «Пришёл». Пусто — спишется строго по тех. картам.</div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {# --- Оплата по терминалу --- #}
+    {% if request.user|can:"payment.view" or request.user|can:"payment.charge" %}
+      <div style="border-top:1px solid var(--border); margin-top:12px; padding-top:14px;">
+        {% if payment and payment.status == 'paid' %}
+          <div class="pay-paid">
+            <span>✓ Оплачено · {{ payment.amount|floatformat:0 }} ₽ · {{ payment.get_method_display }}{% if payment.acquiring_fee %} · эквайринг {{ payment.acquiring_fee|floatformat:0 }} ₽{% endif %}</span>
+            <span class="muted" style="font-size:12px;">{{ payment.updated_at|date:"d.m H:i" }}{% if payment.external_id %} · {{ payment.external_id }}{% endif %}</span>
+          </div>
+        {% elif payment and payment.status == 'sent' %}
+          <div class="pay-sent">Ожидает оплаты на терминале{% if payment.external_id %} · {{ payment.external_id }}{% endif %}</div>
+          {% if request.user|can:"payment.charge" %}
+            <div style="display:flex; gap:10px; margin-top:12px;">
+              <form method="post" action="{% url 'payment_confirm' payment.id %}">{% csrf_token %}
+                <button class="btn primary" type="submit">Подтвердить оплату</button>
+              </form>
+              <form method="post" action="{% url 'payment_cancel' payment.id %}">{% csrf_token %}
+                <button class="btn" type="submit">Отменить</button>
+              </form>
+            </div>
+            <div class="muted" style="font-size:12px; margin-top:8px;">В бою подтверждение прилетит от терминала автоматически. Пока — кнопкой (эмуляция).</div>
+          {% endif %}
+        {% else %}
+          {% if payment and payment.status == 'failed' %}<div class="pay-fail">Ошибка оплаты: {{ payment.error }}</div>{% endif %}
+
+          {# Оплата абонементом клиента, если подходит #}
+          {% if applicable_subs and request.user|can:"subscription.redeem" %}
+            <div style="margin-bottom:10px;">
+              {% for s in applicable_subs %}
+                <form method="post" action="{% url 'subs_redeem' s.id %}" style="margin-bottom:8px;">
+                  {% csrf_token %}
+                  <input type="hidden" name="appointment" value="{{ a.id }}">
+                  <button class="btn" type="submit" style="width:100%; justify-content:space-between; padding:11px;">
+                    <span>Списать с «{{ s.name }}»</span>
+                    <span class="muted" style="font-size:13px;">{% if s.kind == 'visits' %}осталось {{ s.remaining_uses }} виз.{% else %}баланс {{ s.balance|floatformat:0 }} ₽{% endif %}</span>
+                  </button>
+                </form>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          {% if request.user|can:"payment.charge" %}
+            <div style="display:flex; gap:10px;">
+              <form method="post" action="{% url 'payment_charge' a.id %}" style="flex:1;">{% csrf_token %}
+                <input type="hidden" name="method" value="card">
+                <button class="btn primary" type="submit" style="width:100%; justify-content:center; padding:11px;">Картой · {{ a.price|floatformat:0 }} ₽</button>
+              </form>
+              <form method="post" action="{% url 'payment_charge' a.id %}" style="flex:1;">{% csrf_token %}
+                <input type="hidden" name="method" value="cash">
+                <button class="btn" type="submit" style="width:100%; justify-content:center; padding:11px;">Наличными</button>
+              </form>
+            </div>
+          {% endif %}
+        {% endif %}
+      </div>
+    {% endif %}
 
     {% if a.comment %}
       <div style="border-top:1px solid var(--border); margin-top:12px; padding-top:12px; font-size:14px;">

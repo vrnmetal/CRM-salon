@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Склад · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1 class="display" style="margin:0;">Склад</h1>
+      <div class="muted" style="font-size:14px; margin-top:4px;">Расходники списываются сами по тех. картам, когда визит проведён.</div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <a class="btn" href="{% url 'techcards' %}">Тех. карты</a>
+      {% if request.user|can:"stock.manage" %}
+        <button class="btn primary" type="button" onclick="document.getElementById('new-mat').showModal()">Новый материал</button>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if low_count %}
+    <div class="toast error" style="margin-bottom:16px;">Заканчивается материалов: {{ low_count }} — ниже порога остатка.</div>
+  {% endif %}
+
+  <div class="stock-layout">
+    {# Материалы — широкая колонка #}
+    <div class="card stock-materials" style="padding:4px 0;">
+      <div class="mat-head">
+        <div>Материал</div><div>Цена/ед</div><div>Остаток</div><div>Сумма</div><div></div>
+      </div>
+      {% for r in mat_rows %}
+        <details class="mat">
+          <summary class="mat-row">
+            <div class="mat-name">{{ r.m.name }}{% if r.m.is_low %} <span class="tag danger" style="font-size:11px;">мало</span>{% endif %}{% if r.m.waste_pct %} <span class="muted" style="font-size:12px;">потери {{ r.m.waste_pct|floatformat:0 }}%</span>{% endif %}</div>
+            <div class="mat-price">{{ r.m.cost_per_unit|floatformat:0 }} ₽/{{ r.m.unit }}</div>
+            <div class="mat-qty" style="{% if r.m.is_low %}color:var(--status-noshow);{% endif %}">{{ r.m.quantity|floatformat:0 }} {{ r.m.unit }}</div>
+            <div class="mat-value tnum">{{ r.value|money }} ₽</div>
+            <div class="mat-chev">›</div>
+          </summary>
+          {% if request.user|can:"stock.manage" %}
+            <div class="acc-manage-body" style="padding:4px 16px 16px;">
+              <form method="post" action="{% url 'material_move' r.m.id %}" class="inline-form">
+                {% csrf_token %}
+                <input name="qty" type="number" step="0.01" min="0" placeholder="кол-во" style="flex:0 0 90px;">
+                <select name="direction" style="flex:0 0 110px;"><option value="in">Приход</option><option value="out">Списать</option></select>
+                <input name="purchase_price" type="number" step="0.01" min="0" placeholder="цена закупки ₽ (для прихода)" style="flex:0 0 200px;" title="При приходе — цена закупки за единицу; себестоимость пересчитается по средней">
+                <input name="note" placeholder="комментарий">
+                <button class="btn" type="submit">ОК</button>
+              </form>
+              <form method="post" action="{% url 'material_edit' r.m.id %}" class="inline-form">
+                {% csrf_token %}
+                <input name="name" value="{{ r.m.name }}" aria-label="Название">
+                <select name="unit" style="flex:0 0 80px;">
+                  {% for u in "шт,мл,г,мин,усл"|split:"," %}<option value="{{ u }}" {% if r.m.unit == u %}selected{% endif %}>{{ u }}</option>{% endfor %}
+                </select>
+                <input name="cost_per_unit" type="number" step="0.01" value="{{ r.m.cost_per_unit|floatformat:2 }}" style="flex:0 0 90px;" aria-label="Цена" title="Цена за единицу">
+                <input name="low_threshold" type="number" step="0.01" value="{{ r.m.low_threshold|floatformat:2 }}" style="flex:0 0 90px;" aria-label="Порог" title="Порог «мало»">
+                <input name="waste_pct" type="number" step="0.01" min="0" value="{{ r.m.waste_pct|floatformat:2 }}" style="flex:0 0 80px;" aria-label="Потери %" title="Потери/перерасход, %">
+                <button class="btn" type="submit">Сохранить</button>
+              </form>
+            </div>
+          {% endif %}
+        </details>
+      {% empty %}
+        <div class="empty" style="padding:30px;"><div class="big">Склад пуст</div>Добавьте материалы.</div>
+      {% endfor %}
+      {% if has_materials %}
+        <div class="mat-total">
+          <span>Итого на складе</span><span class="tnum">{{ total_value|money }} ₽</span>
+        </div>
+      {% endif %}
+    </div>
+
+    {# Движения — залипающая боковая колонка, видна при прокрутке длинного списка #}
+    <aside class="card stock-moves">
+      <h3 style="margin-top:0;">Движения склада</h3>
+      {% for mv in movements %}
+        <div class="fin-row">
+          <div class="fin-name" style="font-weight:400;">{{ mv.material.name }}<div class="fin-sub">{{ mv.get_reason_display }}{% if mv.note %} · {{ mv.note }}{% endif %}</div></div>
+          <div class="fin-sum" style="color:{% if mv.delta < 0 %}var(--status-noshow){% else %}var(--status-came){% endif %};">{{ mv.delta|floatformat:0 }}</div>
+        </div>
+      {% empty %}
+        <div class="empty" style="padding:22px;">Движений пока нет.</div>
+      {% endfor %}
+    </aside>
+  </div>
+
+  {% if request.user|can:"stock.manage" %}
+  <dialog id="new-mat" class="modal">
+    <form method="post" action="{% url 'material_create' %}">
+      {% csrf_token %}
+      <h3 style="margin-top:0;">Новый материал</h3>
+      <div class="field"><label>Название</label><input name="name" required autofocus placeholder="Краска, оксид, перчатки…"></div>
+      <div class="grid cols-2" style="gap:12px;">
+        <div class="field"><label>Единица</label>
+          <select name="unit">{% for u in "шт,мл,г,мин,усл"|split:"," %}<option value="{{ u }}">{{ u }}</option>{% endfor %}</select>
+        </div>
+        <div class="field"><label>Начальный остаток</label><input name="quantity" type="number" step="0.01" value="0"></div>
+        <div class="field"><label>Цена за единицу, ₽</label><input name="cost_per_unit" type="number" step="0.01" value="0"></div>
+        <div class="field"><label>Порог «мало»</label><input name="low_threshold" type="number" step="0.01" value="0"></div>
+        <div class="field"><label>Потери/перерасход, % {% hint "stock.waste" %}</label><input name="waste_pct" type="number" step="0.01" min="0" value="0" placeholder="напр. 10"></div>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:8px;">
+        <button class="btn" type="button" onclick="document.getElementById('new-mat').close()">Отмена</button>
+        <button class="btn primary" type="submit" style="flex:1; justify-content:center;">Добавить</button>
+      </div>
+    </form>
+  </dialog>
+  {% endif %}
+{% endblock %}

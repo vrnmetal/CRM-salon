@@ -66,6 +66,14 @@ def finance_home(request):
     missed = int(noshow.aggregate(s=Sum("price"))["s"] or 0)
     missed_count = noshow.count()
 
+    # Эквайринг (комиссия банка по оплатам картой) — себестоимость, уменьшает нетто
+    from payments.models import Payment
+    acquiring = int(Payment.objects.filter(
+        status=Payment.PAID, acquiring_fee__gt=0,
+        appointment__start__date__gte=start, appointment__start__date__lte=end,
+    ).aggregate(s=Sum("acquiring_fee"))["s"] or 0)
+    net_revenue = revenue - acquiring
+
     # По мастерам
     by_master = [
         {"name": r["employee__full_name"], "sum": int(r["s"] or 0), "visits": r["n"]}
@@ -99,6 +107,7 @@ def finance_home(request):
         "today_iso": today.isoformat(), "start_iso": start.isoformat(), "end_iso": end.isoformat(),
         "revenue": revenue, "visits": visits, "avg_check": avg_check,
         "missed": missed, "missed_count": missed_count,
+        "acquiring": acquiring, "net_revenue": net_revenue,
         "by_master": by_master, "by_service": by_service, "days": days,
     }
     return render(request, "finance/finance.html", context)

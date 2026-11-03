@@ -32,6 +32,30 @@
   </div>
   {% endif %}
 
+  {# --- Абонементы клиента --- #}
+  {% if subs_enabled %}
+  <div class="card" style="margin-bottom:14px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+      <h3 style="margin:0;">Абонементы</h3>
+      {% if request.user|can:"subscription.sell" %}
+        <a class="btn" href="{% url 'subs_sell' client.id %}" style="padding:6px 12px;">Продать</a>
+      {% endif %}
+    </div>
+    {% for s in subscriptions %}
+      <div class="fin-row">
+        <div class="fin-name">{{ s.name }}
+          <div class="fin-sub">{{ s.get_status_display }}{% if s.expires_at %} · до {{ s.expires_at|date:"d.m.Y" }}{% endif %}</div>
+        </div>
+        <div class="fin-sum" style="font-size:14px;">
+          {% if s.kind == 'visits' %}{{ s.remaining_uses }} виз.{% else %}{{ s.balance|floatformat:0 }} ₽{% endif %}
+        </div>
+      </div>
+    {% empty %}
+      <div class="muted" style="font-size:14px;">Абонементов нет. {% if request.user|can:"subscription.sell" %}Можно продать.{% endif %}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   {# --- Лента визитов (детали ниже сводки) --- #}
   <div class="card" style="padding:4px 22px;">
     {% for a in appts %}

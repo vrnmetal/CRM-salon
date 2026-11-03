@@ -18,7 +18,22 @@
         <p style="color:var(--status-noshow);">{{ form.non_field_errors }}</p>
       {% endif %}
 
-      {# Главное: кто, на что, когда #}
+      {# Сначала клиент — оба поля с живым поиском по базе (выбор подставляет имя и телефон) #}
+      <div style="display:flex; gap:12px;" data-client-ac data-url="{% url 'client_search' %}">
+        <div class="field ac-wrap" style="flex:1;">
+          <label>Имя клиента</label>
+          {{ form.client_name }}
+          <div class="search-res ac-res" style="display:none;"></div>
+        </div>
+        <div class="field ac-wrap" style="flex:1;">
+          <label>Телефон клиента</label>
+          {{ form.client_phone }}
+          <div class="search-res ac-res" style="display:none;"></div>
+          {% if form.client_phone.errors %}<div style="color:var(--status-noshow); font-size:13px;">{{ form.client_phone.errors|striptags }}</div>{% endif %}
+        </div>
+      </div>
+
+      {# Затем кто, на что, когда #}
       <div class="field">
         <label>Мастер</label>
         {{ form.employee }}
@@ -44,19 +59,6 @@
         </div>
       </div>
 
-      {# Клиент #}
-      <div style="display:flex; gap:12px;">
-        <div class="field" style="flex:1;">
-          <label>Телефон клиента</label>
-          {{ form.client_phone }}
-          {% if form.client_phone.errors %}<div style="color:var(--status-noshow); font-size:13px;">{{ form.client_phone.errors|striptags }}</div>{% endif %}
-        </div>
-        <div class="field" style="flex:1;">
-          <label>Имя клиента</label>
-          {{ form.client_name }}
-        </div>
-      </div>
-
       <div class="field" style="display:flex; align-items:center; gap:9px;">
         <input type="checkbox" name="pdn_consent" id="id_pdn_consent" style="width:auto;" {% if form.pdn_consent.value %}checked{% endif %}>
         <label for="id_pdn_consent" style="margin:0;">Клиент дал согласие на обработку ПДн</label>
@@ -65,4 +67,60 @@
       <button class="btn primary" type="submit" style="width:100%; justify-content:center; padding:11px;">Создать запись</button>
     </form>
   </div>
+
+  {# Живой поиск клиента в обоих полях: выбор подставляет имя и телефон #}
+  <script>
+  (function () {
+    var root = document.querySelector('[data-client-ac]');
+    if (!root) return;
+    var url = root.dataset.url;
+    var phone = document.getElementById('id_client_phone');
+    var name = document.getElementById('id_client_name');
+
+    function esc(s) { return (s || '').replace(/</g, '&lt;'); }
+    function attr(s) { return (s || '').replace(/"/g, '&quot;'); }
+    function hideAll() {
+      root.querySelectorAll('.ac-res').forEach(function (b) { b.style.display = 'none'; b.innerHTML = ''; });
+    }
+
+    root.querySelectorAll('.ac-wrap input').forEach(function (input) {
+      var box = input.closest('.ac-wrap').querySelector('.ac-res');
+      var t = null, last = null;
+      input.setAttribute('autocomplete', 'off');
+      input.addEventListener('input', function () {
+        var q = input.value.trim();
+        if (q === last) return; last = q;
+        if (q.length < 2) { box.style.display = 'none'; box.innerHTML = ''; return; }
+        clearTimeout(t);
+        t = setTimeout(function () {
+          fetch(url + '?q=' + encodeURIComponent(q))
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              var items = d.results || [];
+              if (!items.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+              box.innerHTML = items.map(function (r) {
+                return '<a class="search-item" href="#" data-phone="' + attr(r.phone) + '" data-name="' + attr(r.name) + '">' +
+                       '<span class="search-name">' + esc(r.name) + '</span>' +
+                       '<span class="search-phone">' + esc(r.phone) + '</span></a>';
+              }).join('');
+              box.style.display = 'block';
+            })
+            .catch(function () { box.style.display = 'none'; });
+        }, 160);
+      });
+    });
+
+    root.addEventListener('click', function (e) {
+      var it = e.target.closest('.search-item');
+      if (!it) return;
+      e.preventDefault();
+      if (phone) phone.value = it.dataset.phone || '';
+      if (name) name.value = it.dataset.name || '';
+      hideAll();
+    });
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('[data-client-ac]')) hideAll();
+    });
+  })();
+  </script>
 {% endblock %}

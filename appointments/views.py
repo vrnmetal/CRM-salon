@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from appointments.forms import EditAppointmentForm, QuickAppointmentForm
 from appointments.models import Appointment, AppointmentService, Service
@@ -30,10 +31,10 @@ def _parse_date(request):
 
 
 # Параметры временной сетки журнала
-DAY_START_HOUR = 9       # начало рабочего дня (верх сетки)
-DAY_END_HOUR = 22        # конец (низ сетки)
-HOUR_PX = 56             # высота одного часа в пикселях
-MIN_BLOCK_PX = 30        # минимальная высота блока (чтобы короткие были читаемы)
+DAY_START_HOUR = 8       # начало рабочего дня (верх сетки)
+DAY_END_HOUR = 23        # конец (низ сетки)
+HOUR_PX = 64             # высота одного часа (журнал скроллится внутри панели по высоте экрана)
+MIN_BLOCK_PX = 46        # минимальная высота блока (чтобы короткие были читаемы)
 
 
 # --- Журнал записей: временная сетка, колонки-мастера, блоки на своих местах ---
@@ -64,6 +65,8 @@ def journal(request):
             "top": round(top),
             "height": round(height),
             "end": local + timedelta(minutes=a.duration_min),
+            # Услугу показываем только если блок достаточно высокий (иначе режется)
+            "show_service": height >= 58,
         })
 
     columns = [{"employee": e, "blocks": by_employee.get(e.id, [])} for e in employees]
@@ -111,7 +114,51 @@ def appointment_detail(request, pk):
         Appointment.objects.select_related("client", "employee", "service"), pk=pk
     )
     lines = appt.lines.select_related("service").all()
-    return render(request, "appointments/detail.html", {"a": appt, "lines": lines})
+    # Последний платёж по записи (для блока оплаты в карточке)
+    payment = appt.payments.first()
+
+    # Подходящие абонементы клиента (если модуль включён и запись ещё не оплачена)
+    applicable_subs = []
+    from core.modules import is_module_enabled
+    paid = payment and payment.status == "paid"
+    if not paid and is_module_enabled(getattr(request, "tenant", None), "subscriptions"):
+        from subscriptions.models import ClientSubscription
+        today = timezone.localdate()
+        for s in ClientSubscription.objects.filter(client=appt.client,
+                                                    status=ClientSubscription.ACTIVE):
+            if s.is_valid(today) and s.covers(appt):
+                applicable_subs.append(s)
+
+    ctx = {"a": appt, "lines": lines, "payment": payment,
+           "applicable_subs": applicable_subs,
+           "statuses": Appointment.STATUS_CHOICES}
+
+    # Расход материалов по записи (модуль склада)
+    from core.modules import is_module_enabled
+    if is_module_enabled(getattr(request, "tenant", None), "stock"):
+        from stock.models import AppointmentMaterial, Material, StockMovement
+        ctx["stock_enabled"] = True
+        ctx["written_off"] = StockMovement.objects.filter(appointment=appt).exists()
+        ctx["appt_materials"] = list(
+            AppointmentMaterial.objects.filter(appointment=appt).select_related("material"))
+        ctx["stock_materials"] = Material.objects.filter(is_active=True)
+
+    return render(request, "appointments/detail.html", ctx)
+
+
+# --- Быстрая смена статуса записи (на лету, без формы редактирования) ---
+@login_required
+@requires("appointment.edit")
+@require_POST
+def appointment_set_status(request, pk):
+    from django.shortcuts import get_object_or_404
+    appt = get_object_or_404(Appointment, pk=pk)
+    st = request.POST.get("status")
+    if st in dict(Appointment.STATUS_CHOICES):
+        appt.status = st
+        appt.save(update_fields=["status"])
+    # Возврат туда, откуда пришли (карточка или журнал)
+    return redirect(request.META.get("HTTP_REFERER") or reverse("appointment_detail", args=[pk]))
 
 
 # --- Редактирование записи ---

@@ -43,11 +43,14 @@ register_module(Module("dashboard", "Дашборд", is_core=True, order=50))
 register_module(Module("data_health", "Здоровье данных", is_core=True, order=60))
 
 # --- Модули-тумблеры (включаются сборкой/тарифом) ---
-register_module(Module("stock", "Склад и тех. карты", order=110))
-register_module(Module("payroll", "Расчёт зарплат", order=120))
+register_module(Module("stock", "Склад и тех. карты", order=110,
+                       url_prefix="", urlconf="stock.urls"))
+register_module(Module("payroll", "Расчёт зарплат", order=120,
+                       url_prefix="", urlconf="payroll.urls"))
 register_module(Module("finance", "Финансы и касса", order=130,
                        url_prefix="", urlconf="finance.urls"))
-register_module(Module("subscriptions", "Абонементы и лояльность", order=140))
+register_module(Module("subscriptions", "Абонементы и лояльность", order=140,
+                       url_prefix="", urlconf="subscriptions.urls"))
 register_module(Module("reactivation", "Активация базы", order=150))
 register_module(Module("promo", "Продвижение и акции", order=160))
 register_module(Module("reviews", "Отзывы", order=170))

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Аудит · Провайдер{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'provider_home' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">Аудит</h1>
+      <div class="muted" style="font-size:14px; margin-top:4px;">Неизменяемый журнал: заморозки, модули, домены, входы в салоны.</div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:6px 0;">
+    {% for a in entries %}
+      <div class="emp-row" style="grid-template-columns:1fr auto;">
+        <div class="emp-id">
+          <div class="title" style="font-weight:500;">{{ a.action }}{% if a.target %} · {{ a.target }}{% endif %}</div>
+          <div class="sub">{% if a.tenant %}{{ a.tenant.name }}{% endif %}{% if a.user %} · {{ a.user.username }}{% endif %}</div>
+        </div>
+        <div class="emp-meta"><span class="muted" style="font-size:12px;">{{ a.created_at|date:"d.m.Y H:i" }}</span></div>
+      </div>
+    {% empty %}
+      <div class="empty" style="padding:40px;">Журнал пуст.</div>
+    {% endfor %}
+  </div>
+{% endblock %}

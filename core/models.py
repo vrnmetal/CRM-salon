@@ -7,6 +7,7 @@ TenantModel (см. managers.py) и автоматически изолирова
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+from core.managers import TenantModel
 from core.modules import CORE_MODULE_CODES
 
 
@@ -35,6 +36,19 @@ class Tenant(models.Model):
 
     # Тариф (для биллинга позже; пока справочно)
     plan = models.CharField("Тариф", max_length=50, blank=True)
+    # Оплачено до (ручная отметка провайдером; позже свяжем с авто-заморозкой)
+    paid_until = models.DateField("Оплачено до", null=True, blank=True)
+    # Комиссия эквайринга, % (при оплате картой — идёт в себестоимость/уменьшает нетто)
+    acquiring_pct = models.DecimalField("Эквайринг, %", max_digits=5, decimal_places=2, default=0)
+
+    # --- Кастомный домен (апселл). Поддомен *.BASE_DOMAIN работает и без этого. ---
+    custom_domain = models.CharField(
+        "Свой домен", max_length=255, null=True, blank=True, unique=True,
+        help_text="Напр. rogaikopyta.ru — клиент направляет его CNAME на наш сервер",
+    )
+    custom_domain_verified = models.BooleanField("Домен подтверждён", default=False)
+    # Токен для подтверждения владения доменом (DNS TXT), генерируется при задании домена
+    domain_token = models.CharField("Токен проверки домена", max_length=64, blank=True)
 
     created_at = models.DateTimeField("Создан", auto_now_add=True)
 
@@ -99,8 +113,12 @@ class User(AbstractUser):
     # Персональный набор КОДОВ прав этого аккаунта (deny-by-default). Копируется из
     # пресета роли при назначении, затем редактируется индивидуально.
     permission_codes = models.JSONField("Коды прав", default=list, blank=True)
-    # Провайдерский админ: «одно кольцо» над всеми тенантами. Требует 2FA (позже).
+    # Провайдерский админ: «одно кольцо» над всеми тенантами.
     is_provider_admin = models.BooleanField("Провайдерский админ", default=False)
+    # Двухфакторная аутентификация (TOTP). secret — base32; codes — хэши резервных кодов.
+    totp_secret = models.CharField("TOTP-секрет", max_length=64, blank=True)
+    totp_enabled = models.BooleanField("2FA включена", default=False)
+    backup_codes = models.JSONField("Резервные коды (хэши)", default=list, blank=True)
     # Тумблер подсказок на уровне пользователя (новичок — вкл, профи — выкл).
     show_hints = models.BooleanField("Показывать подсказки", default=True)
 
@@ -132,3 +150,35 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.created_at:%Y-%m-%d %H:%M} {self.action}"
+
+
+# --- История действий салона (с возможностью отмены) ---
+class ActivityLog(TenantModel):
+    CREATE = "create"
+    UPDATE = "update"
+    DELETE = "delete"
+    ACTION_CHOICES = [(CREATE, "Создание"), (UPDATE, "Изменение"), (DELETE, "Удаление")]
+
+    actor = models.ForeignKey(
+        "core.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="activity",
+    )
+    action = models.CharField("Действие", max_length=10, choices=ACTION_CHOICES)
+    model_label = models.CharField("Модель", max_length=100)       # напр. appointments.Appointment
+    object_pk = models.CharField("ID объекта", max_length=50)
+    object_repr = models.CharField("Объект", max_length=250)       # имя на момент действия
+    # Снимок состояния «до» (JSON сериализатора Django) — для отката
+    before_json = models.TextField("Снимок до", blank=True)
+    created_at = models.DateTimeField("Когда", auto_now_add=True, db_index=True)
+    undone = models.BooleanField("Отменено", default=False)
+    undone_at = models.DateTimeField("Отменено в", null=True, blank=True)
+    undone_by = models.ForeignKey(
+        "core.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="undos",
+    )
+
+    class Meta:
+        verbose_name = "Запись истории"
+        verbose_name_plural = "История действий"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.get_action_display()} · {self.object_repr}"

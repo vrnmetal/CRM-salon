@@ -32,5 +32,11 @@
         <div class="muted" style="font-size:14px;">Название, акцентный цвет, шрифт и логотип салона.</div>
       </a>
     {% endif %}
+    {% if request.user|can:"branding.manage" and request.user|can:"payment.charge" %}
+      <a class="card" href="{% url 'payment_settings' %}" style="text-decoration:none; color:inherit;">
+        <h3>Оплата и эквайринг</h3>
+        <div class="muted" style="font-size:14px;">Комиссия эквайринга за оплату картой (идёт в себестоимость).</div>
+      </a>
+    {% endif %}
   </div>
 {% endblock %}

@@ -5,9 +5,12 @@ from django.urls import path
 from core import views
 
 urlpatterns = [
-    # Вход/выход (стандартные вьюхи Django со своими шаблонами)
-    path("login/", auth_views.LoginView.as_view(template_name="core/login.html"), name="login"),
+    # Вход (двухшаговый: пароль → при 2FA код), выход
+    path("login/", views.login_view, name="login"),
+    path("login/2fa/", views.login_2fa, name="login_2fa"),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
+    # Безопасность (2FA) провайдерского аккаунта
+    path("security/2fa/", views.security_2fa, name="security_2fa"),
     # Домашний роутер по роли
     path("", views.home, name="home"),
     # Дашборд (журнал живёт в приложении appointments)
@@ -22,6 +25,9 @@ urlpatterns = [
     path("settings/accounts/<int:pk>/preset/", views.account_apply_preset, name="account_apply_preset"),
     path("settings/accounts/<int:pk>/delete/", views.account_delete, name="account_delete"),
     path("settings/branding/", views.branding_settings, name="branding_settings"),
+    # История действий (с отменой)
+    path("history/", views.history, name="history"),
+    path("history/<int:pk>/undo/", views.history_undo, name="history_undo"),
     # Тумблер подсказок
     path("profile/hints/toggle/", views.toggle_hints, name="toggle_hints"),
 ]

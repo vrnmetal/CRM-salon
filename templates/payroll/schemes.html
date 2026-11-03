@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Схемы ЗП · {{ brand.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'payroll_home' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">Схемы ЗП</h1>
+    </div>
+    <button class="btn primary" type="button" onclick="document.getElementById('new-scheme').showModal()">Новая схема</button>
+  </div>
+
+  {# Назначение схем сотрудникам #}
+  <div class="card" style="margin-bottom:16px;">
+    <h3 style="margin-top:0;">Схемы сотрудников</h3>
+    {% for e in employees %}
+      <form method="post" class="inline-form" style="padding:7px 0; border-bottom:1px solid var(--border);">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="assign"><input type="hidden" name="employee" value="{{ e.id }}">
+        <div style="flex:1; font-weight:500;">{{ e.full_name }} <span class="muted" style="font-size:13px; font-weight:400;">{{ e.specialization }}</span></div>
+        <select name="scheme" style="flex:0 0 240px;">
+          <option value="">— без схемы —</option>
+          {% for s in schemes %}<option value="{{ s.id }}" {% if e.payroll_scheme_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+        </select>
+        <button class="btn" type="submit">Назначить</button>
+      </form>
+    {% endfor %}
+  </div>
+
+  {# Редактор схем #}
+  {% for s in schemes %}
+    <div class="card" style="margin-bottom:14px;">
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+        <form method="post" class="inline-form" style="flex:1;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="scheme_edit"><input type="hidden" name="scheme" value="{{ s.id }}">
+          <input name="name" value="{{ s.name }}" style="flex:1; font-weight:600;">
+          <label class="muted" style="font-size:13px;">Оклад/смена</label>
+          <input name="base_per_day" type="number" step="0.01" value="{{ s.base_per_day|floatformat:0 }}" style="flex:0 0 120px;">
+          <button class="btn" type="submit">Сохранить</button>
+        </form>
+        <form method="post" onsubmit="return confirm('Удалить схему «{{ s.name }}»?');">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="scheme_delete"><input type="hidden" name="scheme" value="{{ s.id }}">
+          <button class="btn danger" type="submit">Удалить</button>
+        </form>
+      </div>
+
+      <div class="tier-label">Пороги прогрессии <span class="muted">— с какой выручки за период действует какой процент</span></div>
+      <div class="tier-list">
+        {% for t in s.tiers.all %}
+          <div class="tier-row">
+            <span class="tier-from">выручка от <b>{{ t.min_revenue|money }} ₽</b></span>
+            <span class="tier-arrow">→</span>
+            <span class="tier-pct">{{ t.pct|floatformat:0 }}%</span>
+            <form method="post">{% csrf_token %}
+              <input type="hidden" name="action" value="tier_remove"><input type="hidden" name="tier" value="{{ t.id }}">
+              <button class="btn danger" type="submit" style="padding:4px 9px;" title="Удалить порог">✕</button>
+            </form>
+          </div>
+        {% empty %}
+          <div class="muted" style="font-size:13px; padding:4px 0;">Порогов нет — премия не начисляется.</div>
+        {% endfor %}
+      </div>
+
+      <form method="post" class="tier-add">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="tier_add"><input type="hidden" name="scheme" value="{{ s.id }}">
+        <div class="tier-add-title">Добавить порог</div>
+        <div class="tier-add-fields">
+          <label>Выручка от, ₽<input name="min_revenue" type="number" step="0.01" placeholder="напр. 15000"></label>
+          <label>Ставка, %<input name="pct" type="number" step="0.01" placeholder="напр. 40"></label>
+          <button class="btn primary" type="submit">Добавить</button>
+        </div>
+      </form>
+    </div>
+  {% empty %}
+    <div class="card"><div class="empty"><div class="big">Нет схем</div>Создайте первую схему.</div></div>
+  {% endfor %}
+
+  <dialog id="new-scheme" class="modal">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <h3 style="margin-top:0;">Новая схема</h3>
+      <div class="field"><label>Название</label><input name="name" required autofocus placeholder="Мастер · стандарт"></div>
+      <div class="grid cols-2" style="gap:12px;">
+        <div class="field"><label>Оклад за смену, ₽</label><input name="base_per_day" type="number" step="0.01" value="0"></div>
+        <div class="field"><label>Базовый % с выручки</label><input name="base_pct" type="number" step="0.01" value="0"></div>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:8px;">
+        <button class="btn" type="button" onclick="document.getElementById('new-scheme').close()">Отмена</button>
+        <button class="btn primary" type="submit" style="flex:1; justify-content:center;">Создать</button>
+      </div>
+    </form>
+  </dialog>
+{% endblock %}

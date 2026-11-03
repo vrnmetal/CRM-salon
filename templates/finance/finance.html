@@ -47,6 +47,21 @@
     </div>
   </div>
 
+  {% if acquiring %}
+  <div class="grid auto" style="margin-bottom:16px;">
+    <div class="tile">
+      <div class="label">Эквайринг (комиссия)</div>
+      <div class="value" style="color:var(--status-noshow);">−{{ acquiring|money }}&nbsp;₽</div>
+      <div class="delta flat">себестоимость оплат картой</div>
+    </div>
+    <div class="tile">
+      <div class="label">Выручка-нетто</div>
+      <div class="value">{{ net_revenue|money }}&nbsp;₽</div>
+      <div class="delta flat">за вычетом эквайринга</div>
+    </div>
+  </div>
+  {% endif %}
+
   {# Выручка по дням #}
   <div class="card" style="margin-bottom:16px;">
     <h3 style="margin-top:0;">Выручка по дням</h3>

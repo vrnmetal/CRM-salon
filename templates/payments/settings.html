@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Оплата · Настройки{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'settings_home' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">Оплата и эквайринг</h1>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:460px;">
+    <form method="post">
+      {% csrf_token %}
+      <div class="field">
+        <label>Комиссия эквайринга, %</label>
+        <input name="acquiring_pct" type="number" step="0.01" min="0" value="{{ tenant.acquiring_pct|floatformat:2 }}">
+        <div class="muted" style="font-size:12px; margin-top:6px;">Ставка банка за приём оплаты картой. Списывается как себестоимость — уменьшает чистую выручку в «Финансах».</div>
+      </div>
+      <button class="btn primary" type="submit">Сохранить</button>
+    </form>
+  </div>
+{% endblock %}

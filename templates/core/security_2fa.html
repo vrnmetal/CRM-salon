@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Безопасность · 2FA{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1 class="display" style="margin:0;">Двухфакторная аутентификация</h1>
+      <div class="muted" style="font-size:14px; margin-top:4px;">Защита провайдерского входа кодом из приложения-аутентификатора.</div>
+    </div>
+  </div>
+
+  {# Резервные коды — показываем один раз сразу после генерации #}
+  {% if plain_codes %}
+    <div class="card" style="max-width:560px; margin-bottom:16px; border:1px solid var(--status-wait);">
+      <h3 style="margin-top:0;">Резервные коды — сохраните сейчас</h3>
+      <div class="muted" style="font-size:13px; margin-bottom:10px;">Каждый работает один раз. Это единственный раз, когда они показываются. Храни в менеджере паролей.</div>
+      <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; font-family:monospace; font-size:16px;">
+        {% for c in plain_codes %}<div class="tag" style="justify-content:center;">{{ c }}</div>{% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  {% if two_fa %}
+    <div class="card" style="max-width:560px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+        <span class="tag" style="color:var(--status-came);">включена</span>
+        <span class="muted" style="font-size:13px;">Резервных кодов осталось: {{ backup_left }}</span>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="regen"><button class="btn" type="submit">Перевыпустить резервные коды</button></form>
+        <form method="post" onsubmit="return confirm('Отключить 2FA? Вход снова будет только по паролю.');">{% csrf_token %}<input type="hidden" name="action" value="disable"><button class="btn danger" type="submit">Отключить 2FA</button></form>
+      </div>
+    </div>
+  {% else %}
+    <div class="card" style="max-width:560px;">
+      <h3 style="margin-top:0;">Подключить приложение</h3>
+      <ol class="muted" style="font-size:14px; line-height:1.7; padding-left:18px; margin-top:0;">
+        <li>Открой Google Authenticator → «Добавить» → «Сканировать QR-код».</li>
+        <li>Наведи на код ниже (или введи ключ вручную).</li>
+        <li>Введи 6-значный код из приложения и нажми «Включить».</li>
+      </ol>
+
+      <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap; margin:14px 0;">
+        <div id="qr" data-uri="{{ uri }}" style="background:#fff; padding:10px; border-radius:10px;"></div>
+        <div>
+          <div class="muted" style="font-size:12px;">Ключ для ручного ввода:</div>
+          <div style="font-family:monospace; font-size:15px; letter-spacing:1px; word-break:break-all;">{{ secret }}</div>
+        </div>
+      </div>
+
+      <form method="post" class="inline-form" style="max-width:320px;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="confirm">
+        <input type="text" name="code" placeholder="код из приложения" inputmode="numeric" autocomplete="one-time-code" style="flex:1;">
+        <button class="btn primary" type="submit">Включить</button>
+      </form>
+    </div>
+
+    <script src="{% static 'vendor/qrcode/qrcode.js' %}"></script>
+    <script>
+      (function () {
+        var el = document.getElementById('qr');
+        if (!el || !el.dataset.uri || typeof qrcode === 'undefined') return;
+        var qr = qrcode(0, 'M');
+        qr.addData(el.dataset.uri);
+        qr.make();
+        el.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0 });
+      })();
+    </script>
+  {% endif %}
+{% endblock %}

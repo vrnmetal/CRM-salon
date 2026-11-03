@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Продать абонемент · {{ client.full_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <a class="back" href="{% url 'client_detail' client.id %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>Назад</a>
+      <h1 class="display" style="margin:0;">Продать абонемент</h1>
+      <div class="muted" style="font-size:14px; margin-top:4px;">Клиент: {{ client.full_name }}</div>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:560px;">
+    <form method="post">
+      {% csrf_token %}
+      <div class="field"><label>Продукт</label>
+        <select name="plan" required>
+          <option value="">— выберите —</option>
+          {% for p in plans %}
+            <option value="{{ p.id }}">{{ p.name }} · {{ p.price|money }} ₽ ({% if p.kind == 'visits' %}{{ p.total_uses }} виз.{% else %}баланс {{ p.value|money }} ₽{% endif %})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn primary" type="submit" style="width:100%; justify-content:center;">Продать</button>
+      <div class="muted" style="font-size:12px; margin-top:10px;">Оплату продажи принимай обычным способом (терминал/наличные). Баланс/визиты зачислятся клиенту сразу.</div>
+    </form>
+  </div>
+{% endblock %}

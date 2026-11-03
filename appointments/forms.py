@@ -26,7 +26,13 @@ class QuickAppointmentForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["employee"].queryset = Employee.objects.filter(is_active=True)
+        self.fields["employee"].label_from_instance = _employee_label
         self.fields["service"].queryset = Service.objects.filter(is_active=True)
+
+
+def _employee_label(e):
+    """Мастер в выпадашке: имя + специализация (чтобы новый админ ориентировался)."""
+    return f"{e.full_name} — {e.specialization}" if e.specialization else e.full_name
 
 
 # Сколько услуг можно выбрать в одной записи (в редактировании)
@@ -49,6 +55,7 @@ class EditAppointmentForm(forms.Form):
         super().__init__(*args, **kwargs)
         active = Employee.objects.filter(is_active=True)
         self.fields["employee"].queryset = active
+        self.fields["employee"].label_from_instance = _employee_label
         services = Service.objects.filter(is_active=True)
         # Несколько услуг: первая обязательна, остальные — опционально
         for i in range(1, MAX_SERVICES + 1):
