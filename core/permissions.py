@@ -98,6 +98,10 @@ register("branding.manage", "Настраивать брендирование",
 register("history.view", "Видеть историю действий", "system", "Администрирование")
 register("history.undo", "Отменять действия из истории", "system", "Администрирование")
 
+# --- Интеграция с Яндекс.Картами ---
+# module="system": не гейтим по модулю, иначе владелец не смог бы ВКЛЮЧИТЬ интеграцию.
+register("yandex_booking.manage", "Настраивать интеграцию с Яндекс.Картами", "system", "Интеграции")
+
 # --- Провайдерский слой (только is_provider_admin) ---
 register("provider.tenants.view", "Видеть список тенантов", "provider", "Провайдер")
 register("provider.tenant.toggle", "Включать/выключать тенанта", "provider", "Провайдер")

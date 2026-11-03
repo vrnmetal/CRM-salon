@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Яндекс.Карты · {{ brand.name }}{% endblock %}
+
+{% block content %}
+<style>
+  .yx-field { margin-bottom:14px; }
+  .yx-field label { display:block; font-size:13px; color:var(--text-muted); margin-bottom:5px; }
+  .yx-field input { width:100%; padding:9px 11px; border:1px solid var(--border-strong);
+                    border-radius:var(--radius-sm); font:inherit; color:var(--text); background:var(--surface); }
+  .yx-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .yx-kv { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-top:1px solid var(--border); font-size:14px; }
+  .yx-kv:first-child { border-top:none; }
+  .yx-kv .k { color:var(--text-muted); }
+  .yx-kv .v { font-family:var(--font-mono,monospace); word-break:break-all; text-align:right; }
+  .yx-status { display:inline-flex; align-items:center; gap:7px; font-size:14px; font-weight:540; }
+  .yx-dot { width:9px; height:9px; border-radius:50%; }
+  .yx-on { background:#1C8C4A; } .yx-off { background:var(--text-muted); }
+</style>
+
+<div class="page-head">
+  <div>
+    <div class="sub">Интеграция</div>
+    <h1 class="display" style="margin:2px 0 0;">Онлайн-запись в Яндекс.Картах</h1>
+  </div>
+  <form method="post" style="margin:0;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="toggle">
+    <button class="btn" type="submit">{% if enabled %}Выключить{% else %}Включить{% endif %}</button>
+  </form>
+</div>
+
+<div class="grid cols-2" style="align-items:start;">
+  {# Данные точки для фида организаций #}
+  <div class="card">
+    <h3 style="margin-top:0;">Данные точки</h3>
+    <div class="muted" style="font-size:13px; margin-bottom:14px;">
+      Эти данные уходят в Яндекс в фиде организаций. Permalink — ID вашей карточки в
+      Яндекс.Бизнесе, по нему Яндекс сопоставляет салон с карточкой на Картах.
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="yx-field">
+        <label>Permalink карточки (Яндекс.Бизнес)</label>
+        <input type="text" name="permalink" value="{{ t.yandex_permalink }}" placeholder="например, 1124715036">
+      </div>
+      <div class="yx-field">
+        <label>Адрес</label>
+        <input type="text" name="address" value="{{ t.address }}" placeholder="Россия, Москва, ул. Ленина, 1">
+      </div>
+      <div class="yx-row">
+        <div class="yx-field">
+          <label>Широта</label>
+          <input type="text" name="lat" value="{{ t.latitude|default_if_none:'' }}" placeholder="55.755820">
+        </div>
+        <div class="yx-field">
+          <label>Долгота</label>
+          <input type="text" name="lon" value="{{ t.longitude|default_if_none:'' }}" placeholder="37.617633">
+        </div>
+      </div>
+      <div class="yx-field">
+        <label>Телефон для клиентов</label>
+        <input type="text" name="phone" value="{{ t.public_phone }}" placeholder="+7 495 000-00-00">
+      </div>
+      <div class="yx-field">
+        <label>Рубрика</label>
+        <input type="text" name="rubric" value="{{ t.yandex_rubric }}" placeholder="Салон красоты">
+      </div>
+      <button class="btn" type="submit">Сохранить</button>
+    </form>
+  </div>
+
+  {# Статус и параметры подключения #}
+  <div class="card">
+    <h3 style="margin-top:0;">Подключение</h3>
+    <div style="margin-bottom:14px;">
+      <span class="yx-status">
+        <span class="yx-dot {% if enabled %}yx-on{% else %}yx-off{% endif %}"></span>
+        {% if enabled %}Интеграция включена{% else %}Интеграция выключена{% endif %}
+      </span>
+    </div>
+    <div class="yx-kv"><span class="k">ID компании (companyId)</span><span class="v">{{ company_id }}</span></div>
+    <div class="yx-kv"><span class="k">Адрес API для Яндекса</span><span class="v">{{ api_base }}</span></div>
+    <div class="yx-kv"><span class="k">Страница онлайн-записи</span><span class="v">{{ booking_url }}</span></div>
+    <div class="muted" style="font-size:13px; margin-top:14px;">
+      Адрес API и ID компании передаются Яндексу при подключении партнёрского
+      API. Пока заявка не одобрена и секрет не прописан на сервере — API отвечает
+      «не подключено», это нормально.
+    </div>
+  </div>
+</div>
+{% endblock %}

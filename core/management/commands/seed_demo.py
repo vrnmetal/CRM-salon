@@ -48,6 +48,7 @@ class Command(BaseCommand):
         mods.add("subscriptions")
         mods.add("payroll")
         mods.add("booking")
+        mods.add("yandex_booking")
         tenant.enabled_modules = sorted(mods)
         if not tenant.plan:
             tenant.plan = "Бизнес"
@@ -55,7 +56,19 @@ class Command(BaseCommand):
             tenant.paid_until = timezone.localdate() + timedelta(days=30)
         if not tenant.acquiring_pct:
             tenant.acquiring_pct = 2  # демо: комиссия эквайринга 2%
-        tenant.save(update_fields=["enabled_modules", "plan", "paid_until", "acquiring_pct"])
+        # Демо-данные точки для фида Яндекса (чтобы интеграцию можно было протестировать)
+        if not tenant.address:
+            tenant.yandex_permalink = tenant.yandex_permalink or "1124715036"
+            tenant.address = "Россия, Москва, улица Ленина, 1"
+            tenant.latitude = tenant.latitude or 55.755820
+            tenant.longitude = tenant.longitude or 37.617633
+            tenant.public_phone = tenant.public_phone or "+74950000000"
+            tenant.yandex_rubric = tenant.yandex_rubric or "Салон красоты"
+        tenant.save(update_fields=[
+            "enabled_modules", "plan", "paid_until", "acquiring_pct",
+            "yandex_permalink", "address", "latitude", "longitude",
+            "public_phone", "yandex_rubric",
+        ])
         self.stdout.write(("Создан" if created else "Уже есть") + f" тенант: {tenant.name}")
 
         # Провайдерский админ (control plane над всеми салонами), без тенанта

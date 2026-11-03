@@ -38,6 +38,12 @@
         <div class="muted" style="font-size:14px;">Публичная страница записи для клиентов. Ссылка: /book/{{ request.tenant.slug }}/</div>
       </a>
     {% endif %}
+    {% if request.user|can:"yandex_booking.manage" %}
+      <a class="card" href="{% url 'yandex_settings' %}" style="text-decoration:none; color:inherit;">
+        <h3>Яндекс.Карты</h3>
+        <div class="muted" style="font-size:14px;">Онлайн-запись из карточки организации на Яндекс.Картах.</div>
+      </a>
+    {% endif %}
     {% if request.user|can:"branding.manage" and request.user|can:"payment.charge" %}
       <a class="card" href="{% url 'payment_settings' %}" style="text-decoration:none; color:inherit;">
         <h3>Оплата и эквайринг</h3>

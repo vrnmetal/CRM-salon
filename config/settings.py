@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "subscriptions",
     "payroll",
     "booking",
+    "yandex_booking",
 ]
 
 
@@ -183,3 +184,11 @@ if USE_HTTPS:
     CSRF_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+
+# --- Интеграция с Яндекс.Картами (онлайн-запись) ---
+# Выдаёт Яндекс после одобрения заявки. Пока пусто — API отвечает 503 (безопасно).
+YANDEX_BOOKING_PARTNER_ID = os.environ.get("YANDEX_BOOKING_PARTNER_ID", "")
+YANDEX_BOOKING_SECRET = os.environ.get("YANDEX_BOOKING_SECRET", "")
+# Базовый адрес API Яндекса для обратной синхронизации записей
+YANDEX_BOOKING_API_BASE = os.environ.get("YANDEX_BOOKING_API_BASE", "https://partner.maps.yandex.net")

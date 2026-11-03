@@ -55,6 +55,8 @@ register_module(Module("reactivation", "Активация базы", order=150)
 register_module(Module("promo", "Продвижение и акции", order=160))
 register_module(Module("reviews", "Отзывы", order=170))
 register_module(Module("booking", "Онлайн-запись", order=180))
+register_module(Module("yandex_booking", "Онлайн-запись в Яндекс.Картах", order=185,
+                       url_prefix="", urlconf="yandex_booking.urls"))
 
 
 # Набор кодов ядровых модулей — для быстрой проверки «включён всегда»

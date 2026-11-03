@@ -337,6 +337,61 @@ def analytics(request):
     return render(request, "core/analytics.html", report)
 
 
+# --- Интеграция с Яндекс.Картами: данные точки + вкл/выкл ---
+@login_required
+@requires("yandex_booking.manage")
+def yandex_settings(request):
+    from decimal import Decimal, InvalidOperation
+
+    tenant = request.tenant
+    if tenant is None:
+        raise PermissionDenied("Нет тенанта")
+
+    if request.method == "POST":
+        if request.POST.get("action") == "toggle":
+            mods = set(tenant.enabled_modules or [])
+            if "yandex_booking" in mods:
+                mods.discard("yandex_booking")
+                messages.success(request, "Интеграция с Яндекс.Картами выключена.")
+            else:
+                mods.add("yandex_booking")
+                messages.success(request, "Интеграция с Яндекс.Картами включена.")
+            tenant.enabled_modules = sorted(mods)
+            tenant.save(update_fields=["enabled_modules"])
+        else:
+            def _dec(name):
+                raw = (request.POST.get(name) or "").strip().replace(",", ".")
+                if not raw:
+                    return None
+                try:
+                    return Decimal(raw)
+                except (InvalidOperation, ValueError):
+                    return None
+
+            tenant.yandex_permalink = (request.POST.get("permalink") or "").strip()
+            tenant.address = (request.POST.get("address") or "").strip()
+            tenant.public_phone = (request.POST.get("phone") or "").strip()
+            tenant.yandex_rubric = (request.POST.get("rubric") or "").strip() or "Салон красоты"
+            tenant.latitude = _dec("lat")
+            tenant.longitude = _dec("lon")
+            tenant.save(update_fields=[
+                "yandex_permalink", "address", "public_phone",
+                "yandex_rubric", "latitude", "longitude",
+            ])
+            messages.success(request, "Данные для Яндекс.Карт сохранены.")
+        return redirect("yandex_settings")
+
+    api_base = request.build_absolute_uri("/").rstrip("/") + "/yandex/v1"
+    booking_url = request.build_absolute_uri(f"/book/{tenant.slug}/")
+    return render(request, "core/yandex_settings.html", {
+        "t": tenant,
+        "enabled": tenant.is_module_on("yandex_booking"),
+        "company_id": tenant.slug,
+        "api_base": api_base,
+        "booking_url": booking_url,
+    })
+
+
 # --- Настройки доступа: РЕДАКТИРУЕМЫЕ галочки прав по ролям ---
 # UI строится из реестра прав; собственник отмечает, что можно делать каждой роли.
 @login_required

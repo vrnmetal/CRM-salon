@@ -27,6 +27,8 @@ urlpatterns = [
     path("settings/accounts/<int:pk>/preset/", views.account_apply_preset, name="account_apply_preset"),
     path("settings/accounts/<int:pk>/delete/", views.account_delete, name="account_delete"),
     path("settings/branding/", views.branding_settings, name="branding_settings"),
+    # Интеграция с Яндекс.Картами (данные точки + вкл/выкл)
+    path("settings/yandex/", views.yandex_settings, name="yandex_settings"),
     # История действий (с отменой)
     path("history/", views.history, name="history"),
     path("history/<int:pk>/undo/", views.history_undo, name="history_undo"),

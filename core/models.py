@@ -50,6 +50,17 @@ class Tenant(models.Model):
     # Токен для подтверждения владения доменом (DNS TXT), генерируется при задании домена
     domain_token = models.CharField("Токен проверки домена", max_length=64, blank=True)
 
+    # --- Интеграция с Яндекс.Картами (онлайн-запись) ---
+    # Permalink карточки организации в Яндекс.Бизнесе — ключ сопоставления нашей
+    # компании с карточкой на Картах (владелец берёт его из Яндекс.Бизнеса).
+    yandex_permalink = models.CharField("Яндекс permalink", max_length=40, blank=True)
+    # Данные точки для фида организаций (адрес, гео, телефон, рубрика).
+    address = models.CharField("Адрес", max_length=255, blank=True)
+    latitude = models.DecimalField("Широта", max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField("Долгота", max_digits=9, decimal_places=6, null=True, blank=True)
+    public_phone = models.CharField("Телефон для клиентов", max_length=20, blank=True)
+    yandex_rubric = models.CharField("Рубрика (Яндекс)", max_length=100, blank=True, default="Салон красоты")
+
     created_at = models.DateTimeField("Создан", auto_now_add=True)
 
     class Meta:
