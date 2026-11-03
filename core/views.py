@@ -22,6 +22,7 @@ from django.views.decorators.http import require_POST
 from core import totp
 from core.forms import AccountCreateForm, BrandingForm
 from core.models import Role, User
+from core.modules import is_module_enabled
 from core.permissions import REGISTRY, has_perm, requires, requires_any
 
 
@@ -234,6 +235,13 @@ def dashboard(request):
     load = round(100 * booked_min / work_min) if work_min else 0
     free_hours = max(0, (work_min - booked_min)) // 60
 
+    # --- Доля онлайн-записи за месяц (портал + внешние площадки) ---
+    appts_month = A.objects.filter(start__date__gte=month_start)
+    total_month = appts_month.count()
+    online_month = appts_month.filter(
+        source__in=[A.SOURCE_PORTAL, A.SOURCE_EXTERNAL]).count()
+    online_rate = round(100 * online_month / total_month) if total_month else 0
+
     # --- Сегодня одним взглядом ---
     today_stat = {
         "total": today_appts.count(),
@@ -272,20 +280,18 @@ def dashboard(request):
         "sleeping": sleeping,
         "sleeping_potential": sleeping_potential,
         "noshow_month": noshow_month,
+        "online_rate": online_rate,
         "week": week,
+        "active": "overview",
     }
     return render(request, "core/dashboard.html", context)
 
 
-# --- Аналитика по записям: срез за период + выгрузка в Excel ---
-@login_required
-@requires("analytics.view")
-def analytics(request):
+# --- Период для вкладок дашборда (пресеты + произвольный диапазон) ---
+def _dash_period(request):
     from datetime import date, timedelta
 
     from django.utils import timezone
-
-    from core.analytics import build_report, to_xlsx
 
     today = timezone.localdate()
     f = request.GET.get("from")
@@ -315,26 +321,58 @@ def analytics(request):
     else:
         key = "30d"
         start, end, label = today - timedelta(days=29), today, "30 дней"
+    return start, end, label, key
 
-    report = build_report(start, end, label, key)
 
-    # Выгрузка
-    if request.GET.get("export") == "xlsx":
-        data = to_xlsx(report)
-        resp = HttpResponse(
-            data,
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-        resp["Content-Disposition"] = (
-            f'attachment; filename="analytics_{start:%Y%m%d}_{end:%Y%m%d}.xlsx"'
-        )
-        return resp
-
+def _dash_extra(report, start, end):
     report["presets"] = [("today", "Сегодня"), ("7d", "7 дней"),
                          ("30d", "30 дней"), ("month", "Этот месяц")]
     report["cur_from"] = start.isoformat()
     report["cur_to"] = end.isoformat()
-    return render(request, "core/analytics.html", report)
+    return report
+
+
+def _xlsx_response(data, name):
+    resp = HttpResponse(
+        data,
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    resp["Content-Disposition"] = f'attachment; filename="{name}"'
+    return resp
+
+
+# --- Дашборд → вкладка «Записи»: срез по записям + выгрузка ---
+@login_required
+@requires("analytics.view")
+def dash_records(request):
+    from core.analytics import build_report, to_xlsx
+
+    start, end, label, key = _dash_period(request)
+    report = build_report(start, end, label, key)
+    if request.GET.get("export") == "xlsx":
+        return _xlsx_response(to_xlsx(report), f"zapisi_{start:%Y%m%d}_{end:%Y%m%d}.xlsx")
+    report = _dash_extra(report, start, end)
+    report["active"] = "records"
+    return render(request, "core/dashboard_records.html", report)
+
+
+# --- Дашборд → вкладка «Финансы»: выручка/чек/оплаты/ЗП + выгрузка ---
+@login_required
+@requires("finance.view")
+def dash_finance(request):
+    from core.analytics import build_finance, to_xlsx_finance
+
+    start, end, label, key = _dash_period(request)
+    tenant = getattr(request.user, "tenant", None)
+    with_payments = is_module_enabled(tenant, "finance")
+    with_payroll = is_module_enabled(tenant, "payroll") and has_perm(request.user, "payroll.view")
+    report = build_finance(start, end, label, key,
+                           with_payments=with_payments, with_payroll=with_payroll)
+    if request.GET.get("export") == "xlsx":
+        return _xlsx_response(to_xlsx_finance(report), f"finansy_{start:%Y%m%d}_{end:%Y%m%d}.xlsx")
+    report = _dash_extra(report, start, end)
+    report["active"] = "finance"
+    return render(request, "core/dashboard_finance.html", report)
 
 
 # --- Интеграция с Яндекс.Картами: данные точки + вкл/выкл ---

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load core_extras %}
-{% block title %}Аналитика · {{ brand.name }}{% endblock %}
+{% block title %}Записи · Дашборд · {{ brand.name }}{% endblock %}
 
 {% block content %}
 <style>
@@ -18,19 +18,20 @@
   .an-table td { padding:9px 10px; border-top:1px solid var(--border); }
   .an-table td.num, .an-table th.num { text-align:right; }
   .an-table tr:first-child td { border-top:none; }
-  .an-bar { height:6px; border-radius:4px; background:var(--accent); min-width:3px; }
   .an-empty { color:var(--text-muted); padding:20px 2px; }
 </style>
 
 <div class="page-head">
   <div>
-    <div class="sub">Аналитика по записям</div>
+    <div class="sub">Дашборд · Записи</div>
     <h1 class="display" style="margin:2px 0 0;">{{ period.label }}</h1>
   </div>
   <a class="btn" href="?export=xlsx{% if period.key == 'custom' %}&from={{ cur_from }}&to={{ cur_to }}{% else %}&period={{ period.key }}{% endif %}">
     Выгрузить в Excel
   </a>
 </div>
+
+{% include "core/_dash_tabs.html" with active="records" %}
 
 <div class="an-tools">
   <div class="an-chips">
@@ -42,11 +43,10 @@
     <input type="date" name="from" value="{{ cur_from }}">
     <span style="color:var(--text-muted);">—</span>
     <input type="date" name="to" value="{{ cur_to }}">
-    <button class="btn ghost" type="submit">Период</button>
+    <button class="btn" type="submit">Период</button>
   </form>
 </div>
 
-{# --- Главные метрики --- #}
 <div class="grid auto" style="margin-bottom:16px;">
   <div class="tile">
     <div class="label">Записей всего</div>
@@ -72,67 +72,42 @@
 
 {% if totals.total %}
 <div class="grid cols-2" style="align-items:start;">
-  {# Источники #}
   <div class="card">
     <h3 style="margin-top:0;">Источники записей</h3>
     <table class="an-table">
       <tr><th>Источник</th><th class="num">Записей</th><th class="num">Доля</th><th class="num">Выручка</th></tr>
       {% for s in by_source %}
-      <tr>
-        <td>{{ s.label }}</td>
-        <td class="num">{{ s.count }}</td>
-        <td class="num">{{ s.pct }}%</td>
-        <td class="num">{{ s.revenue|money }} ₽</td>
-      </tr>
+      <tr><td>{{ s.label }}</td><td class="num">{{ s.count }}</td><td class="num">{{ s.pct }}%</td><td class="num">{{ s.revenue|money }} ₽</td></tr>
       {% endfor %}
     </table>
   </div>
-
-  {# Статусы #}
   <div class="card">
     <h3 style="margin-top:0;">Статусы</h3>
     <table class="an-table">
       <tr><th>Статус</th><th class="num">Записей</th><th class="num">Доля</th></tr>
       {% for s in by_status %}
-      <tr>
-        <td>{{ s.label }}</td>
-        <td class="num">{{ s.count }}</td>
-        <td class="num">{{ s.pct }}%</td>
-      </tr>
+      <tr><td>{{ s.label }}</td><td class="num">{{ s.count }}</td><td class="num">{{ s.pct }}%</td></tr>
       {% endfor %}
     </table>
   </div>
 </div>
 
-{# Мастера #}
 <div class="card" style="margin-top:16px;">
   <h3 style="margin-top:0;">По мастерам</h3>
   <table class="an-table">
     <tr><th>Мастер</th><th class="num">Записей</th><th class="num">Пришли</th><th class="num">Не пришли</th><th class="num">Выручка</th></tr>
     {% for m in by_master %}
-    <tr>
-      <td>{{ m.name }}</td>
-      <td class="num">{{ m.total }}</td>
-      <td class="num">{{ m.came }}</td>
-      <td class="num">{{ m.noshow }}</td>
-      <td class="num">{{ m.revenue|money }} ₽</td>
-    </tr>
+    <tr><td>{{ m.name }}</td><td class="num">{{ m.total }}</td><td class="num">{{ m.came }}</td><td class="num">{{ m.noshow }}</td><td class="num">{{ m.revenue|money }} ₽</td></tr>
     {% endfor %}
   </table>
 </div>
 
-{# Услуги #}
 <div class="card" style="margin-top:16px;">
   <h3 style="margin-top:0;">По услугам</h3>
   <table class="an-table">
     <tr><th>Услуга</th><th class="num">Записей</th><th class="num">Пришли</th><th class="num">Выручка</th></tr>
     {% for s in by_service %}
-    <tr>
-      <td>{{ s.name }}</td>
-      <td class="num">{{ s.total }}</td>
-      <td class="num">{{ s.came }}</td>
-      <td class="num">{{ s.revenue|money }} ₽</td>
-    </tr>
+    <tr><td>{{ s.name }}</td><td class="num">{{ s.total }}</td><td class="num">{{ s.came }}</td><td class="num">{{ s.revenue|money }} ₽</td></tr>
     {% endfor %}
   </table>
 </div>

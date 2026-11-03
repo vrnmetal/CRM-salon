@@ -10,6 +10,8 @@
     </div>
   </div>
 
+  {% include "core/_dash_tabs.html" with active="overview" %}
+
   {# Сквозной поиск — клиенты, сотрудники, услуги; на лету, с группами #}
   {% if request.user|can:"client.view" or request.user|can:"staff.view" or request.user|can:"service.view" %}
   <div class="search-wrap" style="margin-bottom:18px;">
@@ -41,6 +43,13 @@
       <div class="value">{{ load }}%</div>
       <div class="delta {% if free_hours %}down{% else %}up{% endif %}">свободно ~{{ free_hours }} ч</div>
     </div>
+    {% if request.user|can:"analytics.view" %}
+    <a class="tile" href="{% url 'dash_records' %}?period=month" style="text-decoration:none; color:inherit;">
+      <div class="label">Доля онлайн-записи · месяц</div>
+      <div class="value">{{ online_rate }}%</div>
+      <div class="delta flat">портал + Яндекс →</div>
+    </a>
+    {% endif %}
   </div>
 
   <div class="grid cols-2" style="align-items:start;">

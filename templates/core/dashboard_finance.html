@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Финансы · Дашборд · {{ brand.name }}{% endblock %}
+
+{% block content %}
+<style>
+  .an-tools { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+  .an-chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .an-chip { padding:7px 14px; border:1px solid var(--border-strong); border-radius:20px;
+             text-decoration:none; color:var(--text-muted); font-size:14px; }
+  .an-chip.on { background:var(--accent); border-color:var(--accent); color:var(--accent-contrast); }
+  .an-date { display:flex; align-items:center; gap:6px; margin-left:auto; flex-wrap:wrap; }
+  .an-date input { padding:7px 10px; border:1px solid var(--border-strong); border-radius:var(--radius-sm);
+                   font:inherit; color:var(--text); background:var(--surface); }
+  .an-table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  .an-table th { text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.03em;
+                 color:var(--text-muted); font-weight:600; padding:0 10px 8px; }
+  .an-table td { padding:9px 10px; border-top:1px solid var(--border); }
+  .an-table td.num, .an-table th.num { text-align:right; }
+  .an-table tr:first-child td { border-top:none; }
+  .an-empty { color:var(--text-muted); padding:20px 2px; }
+</style>
+
+<div class="page-head">
+  <div>
+    <div class="sub">Дашборд · Финансы</div>
+    <h1 class="display" style="margin:2px 0 0;">{{ period.label }}</h1>
+  </div>
+  <a class="btn" href="?export=xlsx{% if period.key == 'custom' %}&from={{ cur_from }}&to={{ cur_to }}{% else %}&period={{ period.key }}{% endif %}">
+    Выгрузить в Excel
+  </a>
+</div>
+
+{% include "core/_dash_tabs.html" with active="finance" %}
+
+<div class="an-tools">
+  <div class="an-chips">
+    {% for k, lbl in presets %}
+      <a class="an-chip {% if period.key == k %}on{% endif %}" href="?period={{ k }}">{{ lbl }}</a>
+    {% endfor %}
+  </div>
+  <form class="an-date" method="get">
+    <input type="date" name="from" value="{{ cur_from }}">
+    <span style="color:var(--text-muted);">—</span>
+    <input type="date" name="to" value="{{ cur_to }}">
+    <button class="btn" type="submit">Период</button>
+  </form>
+</div>
+
+<div class="grid auto" style="margin-bottom:16px;">
+  <div class="tile">
+    <div class="label">Выручка (пришедшие)</div>
+    <div class="value">{{ totals.revenue|money }}&nbsp;₽</div>
+    <div class="delta flat">{{ totals.came }} визит{{ totals.came|plural_ru:",а,ов" }}</div>
+  </div>
+  <div class="tile">
+    <div class="label">Средний чек</div>
+    <div class="value">{{ totals.avg_check|money }}&nbsp;₽</div>
+  </div>
+  {% if with_payments %}
+  <div class="tile">
+    <div class="label">Комиссия эквайринга</div>
+    <div class="value">{{ totals.acquiring|money }}&nbsp;₽</div>
+    <div class="delta flat">расход с оплат картой</div>
+  </div>
+  {% endif %}
+  {% if with_payroll %}
+  <div class="tile">
+    <div class="label">Фонд ЗП</div>
+    <div class="value">{{ totals.payroll_fund|money }}&nbsp;₽</div>
+    <div class="delta flat">за период</div>
+  </div>
+  {% endif %}
+  {% if with_payments or with_payroll %}
+  <div class="tile">
+    <div class="label">Остаток</div>
+    <div class="value">{{ totals.net|money }}&nbsp;₽</div>
+    <div class="delta flat">выручка − эквайринг − ЗП</div>
+  </div>
+  {% endif %}
+</div>
+
+{% if totals.came %}
+<div class="grid cols-2" style="align-items:start;">
+  {% if with_payments and by_method %}
+  <div class="card">
+    <h3 style="margin-top:0;">Способы оплаты</h3>
+    <table class="an-table">
+      <tr><th>Способ</th><th class="num">Операций</th><th class="num">Сумма</th></tr>
+      {% for m in by_method %}
+      <tr><td>{{ m.label }}</td><td class="num">{{ m.count }}</td><td class="num">{{ m.amount|money }} ₽</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h3 style="margin-top:0;">Выручка по услугам</h3>
+    <table class="an-table">
+      <tr><th>Услуга</th><th class="num">Визитов</th><th class="num">Выручка</th></tr>
+      {% for s in by_service %}
+      <tr><td>{{ s.name }}</td><td class="num">{{ s.count }}</td><td class="num">{{ s.revenue|money }} ₽</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <h3 style="margin-top:0;">По мастерам</h3>
+  <table class="an-table">
+    {% if with_payroll %}
+    <tr><th>Мастер</th><th class="num">Выручка</th><th class="num">ЗП</th><th class="num">Остаток</th></tr>
+    {% for m in by_master %}
+    <tr><td>{{ m.name }}</td><td class="num">{{ m.revenue|money }} ₽</td><td class="num">{{ m.payroll|money }} ₽</td><td class="num">{{ m.margin|money }} ₽</td></tr>
+    {% endfor %}
+    {% else %}
+    <tr><th>Мастер</th><th class="num">Выручка</th></tr>
+    {% for m in by_master %}
+    <tr><td>{{ m.name }}</td><td class="num">{{ m.revenue|money }} ₽</td></tr>
+    {% endfor %}
+    {% endif %}
+  </table>
+</div>
+{% else %}
+<div class="card"><div class="an-empty">За выбранный период выручки нет.</div></div>
+{% endif %}
+{% endblock %}

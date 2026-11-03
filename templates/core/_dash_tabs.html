@@ -1,0 +1,19 @@
+{% load core_extras %}
+<style>
+  .dash-tabs { display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:22px; }
+  .dash-tabs a { padding:10px 16px; text-decoration:none; color:var(--text-muted); font-size:15px;
+                 font-weight:540; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .dash-tabs a:hover { color:var(--text); }
+  .dash-tabs a.on { color:var(--text); border-bottom-color:var(--accent); }
+</style>
+<div class="dash-tabs">
+  {% if request.user|can:"dashboard.view" %}
+    <a href="{% url 'dashboard' %}" class="{% if active == 'overview' %}on{% endif %}">Обзор</a>
+  {% endif %}
+  {% if request.user|can:"analytics.view" %}
+    <a href="{% url 'dash_records' %}" class="{% if active == 'records' %}on{% endif %}">Записи</a>
+  {% endif %}
+  {% if request.user|can:"finance.view" %}
+    <a href="{% url 'dash_finance' %}" class="{% if active == 'finance' %}on{% endif %}">Финансы</a>
+  {% endif %}
+</div>

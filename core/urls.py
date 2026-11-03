@@ -13,10 +13,10 @@ urlpatterns = [
     path("security/2fa/", views.security_2fa, name="security_2fa"),
     # Домашний роутер по роли
     path("", views.home, name="home"),
-    # Дашборд (журнал живёт в приложении appointments)
+    # Дашборд: Обзор + вкладки-срезы (журнал живёт в приложении appointments)
     path("dashboard/", views.dashboard, name="dashboard"),
-    # Аналитика по записям (+ выгрузка в Excel через ?export=xlsx)
-    path("analytics/", views.analytics, name="analytics"),
+    path("dashboard/records/", views.dash_records, name="dash_records"),
+    path("dashboard/finance/", views.dash_finance, name="dash_finance"),
     # Сквозной поиск (клиенты/сотрудники/услуги)
     path("search/", views.global_search, name="global_search"),
     # Раздел «Настройки» собственника
