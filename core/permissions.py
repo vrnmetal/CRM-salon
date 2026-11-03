@@ -78,6 +78,7 @@ register("techcard.edit", "Редактировать тех. карты усл�
 
 # --- Дашборд ---
 register("dashboard.view", "Видеть дашборд собственника", "dashboard", "Аналитика")
+register("analytics.view", "Видеть аналитику по записям (и выгрузку)", "dashboard", "Аналитика")
 
 # --- Финансы и касса (модуль-тумблер) ---
 register("finance.view", "Видеть финансы и кассу", "finance", "Финансы")
@@ -183,6 +184,7 @@ def role_presets() -> dict[str, dict]:
     admin_codes = _codes_for_modules({"appointments", "clients"}) + [
         "staff.view",
         "dashboard.view",
+        "analytics.view",
         # Администратор на ресепшене принимает оплату и работает с абонементами
         "payment.view",
         "payment.charge",

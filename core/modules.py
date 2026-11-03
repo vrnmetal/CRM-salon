@@ -54,6 +54,7 @@ register_module(Module("subscriptions", "Абонементы и лояльно�
 register_module(Module("reactivation", "Активация базы", order=150))
 register_module(Module("promo", "Продвижение и акции", order=160))
 register_module(Module("reviews", "Отзывы", order=170))
+register_module(Module("booking", "Онлайн-запись", order=180))
 
 
 # Набор кодов ядровых модулей — для быстрой проверки «включён всегда»

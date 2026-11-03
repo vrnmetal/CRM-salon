@@ -73,6 +73,18 @@ class Appointment(TenantModel):
         (STATUS_NOSHOW, "Не пришёл"),
     ]
 
+    # Откуда появилась запись. Нужно для аналитики (доля онлайн-записи) и для
+    # интеграций: запись из внешней площадки хранит её систему и ID, чтобы
+    # синхронизировать перенос/отмену обратно.
+    SOURCE_JOURNAL = "journal"    # создана вручную в журнале
+    SOURCE_PORTAL = "portal"      # наш публичный портал онлайн-записи
+    SOURCE_EXTERNAL = "external"  # внешняя площадка (Яндекс.Карты и т.п.)
+    SOURCE_CHOICES = [
+        (SOURCE_JOURNAL, "Журнал"),
+        (SOURCE_PORTAL, "Онлайн-портал"),
+        (SOURCE_EXTERNAL, "Внешняя площадка"),
+    ]
+
     client = models.ForeignKey(
         "clients.Client", on_delete=models.PROTECT, related_name="appointments",
         verbose_name="Клиент",
@@ -95,6 +107,15 @@ class Appointment(TenantModel):
     # Согласие на обработку ПДн (152-ФЗ) — фиксируем в момент записи
     pdn_consent = models.BooleanField("Согласие на обработку ПДн", default=False)
     created_at = models.DateTimeField("Создана", auto_now_add=True)
+
+    # Источник записи и привязка к внешней системе (для интеграций)
+    source = models.CharField(
+        "Источник", max_length=20, choices=SOURCE_CHOICES, default=SOURCE_JOURNAL)
+    # Внешняя площадка, через которую пришла запись (например, "yandex"). Пусто — наша.
+    external_system = models.CharField("Внешняя система", max_length=30, blank=True, default="")
+    # ID записи во внешней системе (bookingId Яндекса и т.п.) — для обратной синхронизации
+    external_id = models.CharField(
+        "Внешний ID", max_length=120, blank=True, default="", db_index=True)
 
     class Meta:
         verbose_name = "Запись"

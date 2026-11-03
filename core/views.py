@@ -14,7 +14,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -275,6 +275,66 @@ def dashboard(request):
         "week": week,
     }
     return render(request, "core/dashboard.html", context)
+
+
+# --- Аналитика по записям: срез за период + выгрузка в Excel ---
+@login_required
+@requires("analytics.view")
+def analytics(request):
+    from datetime import date, timedelta
+
+    from django.utils import timezone
+
+    from core.analytics import build_report, to_xlsx
+
+    today = timezone.localdate()
+    f = request.GET.get("from")
+    t = request.GET.get("to")
+    key = request.GET.get("period") or "30d"
+
+    if f or t:
+        key = "custom"
+        try:
+            start = date.fromisoformat(f)
+        except (ValueError, TypeError):
+            start = today - timedelta(days=29)
+        try:
+            end = date.fromisoformat(t)
+        except (ValueError, TypeError):
+            end = today
+        if end < start:
+            start, end = end, start
+        label = f"{start:%d.%m.%Y} — {end:%d.%m.%Y}"
+    elif key == "today":
+        start = end = today
+        label = "Сегодня"
+    elif key == "7d":
+        start, end, label = today - timedelta(days=6), today, "7 дней"
+    elif key == "month":
+        start, end, label = today.replace(day=1), today, "Этот месяц"
+    else:
+        key = "30d"
+        start, end, label = today - timedelta(days=29), today, "30 дней"
+
+    report = build_report(start, end, label, key)
+
+    # Выгрузка
+    if request.GET.get("export") == "xlsx":
+        data = to_xlsx(report)
+        resp = HttpResponse(
+            data,
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        resp["Content-Disposition"] = (
+            f'attachment; filename="analytics_{start:%Y%m%d}_{end:%Y%m%d}.xlsx"'
+        )
+        return resp
+
+    report["presets"] = [("today", "Сегодня"), ("7d", "7 дней"),
+                         ("30d", "30 дней"), ("month", "Этот месяц")]
+    report["cur_from"] = start.isoformat()
+    report["cur_to"] = end.isoformat()
+    return render(request, "core/analytics.html", report)
 
 
 # --- Настройки доступа: РЕДАКТИРУЕМЫЕ галочки прав по ролям ---

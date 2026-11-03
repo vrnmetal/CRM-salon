@@ -1,0 +1,54 @@
+{% load static %}<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Запись · {{ brand.name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=35">
+  {% if brand.accent %}<style>:root { --accent: {{ brand.accent }}; }</style>{% endif %}
+  {% if brand.font %}<style>:root { --font-sans: {{ brand.font }}; }</style>{% endif %}
+  <style>
+    body { background: var(--bg); }
+    .bk-wrap { max-width: 640px; margin: 0 auto; padding: 28px 18px 60px; }
+    .bk-head { display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 24px; }
+    .bk-logo { max-height: 56px; margin-bottom: 10px; }
+    .bk-name { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+    .bk-step { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+    .bk-item { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+               padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+               margin-bottom: 10px; text-decoration: none; color: inherit; background: var(--surface); }
+    .bk-item:hover { border-color: var(--accent); }
+    .bk-item .t { font-weight: 540; }
+    .bk-item .s { color: var(--text-soft); font-size: 13px; }
+    .bk-cat { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted);
+              margin: 18px 2px 8px; font-weight: 600; }
+    .bk-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+    .bk-slot { padding: 10px 0; text-align: center; border: 1px solid var(--border-strong);
+               border-radius: var(--radius-sm); background: var(--surface); cursor: pointer;
+               text-decoration: none; color: var(--text); font-variant-numeric: tabular-nums; }
+    .bk-slot:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+    .bk-days { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 14px; }
+    .bk-day { flex: 0 0 auto; padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+              text-decoration: none; color: var(--text-muted); font-size: 13px; text-align: center; }
+    .bk-day.on { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+    .bk-masters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+    .bk-master { padding: 7px 13px; border: 1px solid var(--border-strong); border-radius: 20px;
+                 text-decoration: none; color: var(--text-muted); font-size: 14px; }
+    .bk-master.on { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+    .bk-back { color: var(--text-muted); text-decoration: none; font-size: 14px; display: inline-block; margin-bottom: 14px; }
+    .bk-powered { text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <div class="bk-wrap">
+    <div class="bk-head">
+      {% if brand.logo_url %}<img class="bk-logo" src="{{ brand.logo_url }}" alt="{{ brand.name }}">{% endif %}
+      <div class="bk-name">{{ brand.name }}</div>
+      <div class="bk-step">{% block step %}Онлайн-запись{% endblock %}</div>
+    </div>
+    {% block content %}{% endblock %}
+    <div class="bk-powered">Онлайн-запись</div>
+  </div>
+  <script src="{% static 'js/phone.js' %}?v=1"></script>
+</body>
+</html>

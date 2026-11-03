@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     "stock",
     "subscriptions",
     "payroll",
+    "booking",
 ]
 
 

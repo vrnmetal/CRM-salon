@@ -21,6 +21,8 @@ urlpatterns = [
     path("", include("provider.urls")),
     # Оплаты (приём платежей; доступ — право payment.*, гейтится модулем finance)
     path("", include("payments.urls")),
+    # Публичный портал онлайн-записи (без входа; тенант по slug в URL)
+    path("", include("booking.urls")),
 ]
 
 # Подключаем urls.py каждого зарегистрированного модуля, у которого он есть.

@@ -1,0 +1,16 @@
+{% extends "booking/base.html" %}
+{% block step %}Вы записаны{% endblock %}
+{% block content %}
+  <div style="text-align:center; padding:20px 0;">
+    <div style="font-size:40px;">✓</div>
+    <h2 style="margin:10px 0 4px;">Готово!</h2>
+    <div class="s" style="color:var(--text-soft);">Ждём вас</div>
+  </div>
+  <div class="bk-item" style="flex-direction:column; align-items:flex-start; gap:6px;">
+    <div class="t">{{ a.service.name }}</div>
+    <div class="s">Мастер: {{ a.employee.full_name }}</div>
+    <div class="s">Когда: {{ a.start|date:'j E, H:i' }}</div>
+    <div class="s">Сумма: {{ a.price|floatformat:0 }} ₽</div>
+  </div>
+  <div class="s" style="color:var(--text-muted); font-size:13px; margin-top:12px; text-align:center;">Если планы изменятся — позвоните в салон.</div>
+{% endblock %}

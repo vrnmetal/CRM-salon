@@ -21,7 +21,15 @@ from staff.models import Employee
 class Command(BaseCommand):
     help = "Создаёт демо-тенанта, роли из пресетов и демо-пользователей."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--with-appointments",
+            action="store_true",
+            help="Дополнительно создать 3 демо-записи на сегодня (по умолчанию НЕ создаёт).",
+        )
+
     def handle(self, *args, **options):
+        self._with_appts = options.get("with_appointments", False)
         # --- Тенант ---
         tenant, created = Tenant.objects.get_or_create(
             slug="demo",
@@ -39,6 +47,7 @@ class Command(BaseCommand):
         mods.add("stock")
         mods.add("subscriptions")
         mods.add("payroll")
+        mods.add("booking")
         tenant.enabled_modules = sorted(mods)
         if not tenant.plan:
             tenant.plan = "Бизнес"
@@ -202,7 +211,12 @@ class Command(BaseCommand):
                 e.save(update_fields=["payroll_scheme"])
         self.stdout.write("  схема ЗП назначена мастерам")
 
-        # Записи на сегодня (если ещё не создавали)
+        # Записи на сегодня — ТОЛЬКО по флагу --with-appointments.
+        # Иначе команду можно безопасно гонять на рабочей базе: она не подкинет
+        # «левых» записей в журнал.
+        if not getattr(self, "_with_appts", False):
+            self.stdout.write("  демо-записи пропущены (запусти с --with-appointments, чтобы создать)")
+            return
         today = timezone.localdate()
         if not Appointment.objects.filter(start__date=today).exists():
             plan = [

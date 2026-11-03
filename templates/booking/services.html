@@ -1,0 +1,15 @@
+{% extends "booking/base.html" %}
+{% block step %}Выберите услугу{% endblock %}
+{% block content %}
+  {% for g in groups %}
+    {% if g.cat %}<div class="bk-cat">{{ g.cat.name }}</div>{% else %}<div class="bk-cat">Услуги</div>{% endif %}
+    {% for s in g.items %}
+      <a class="bk-item" href="{% url 'book_slots' slug s.id %}">
+        <div><div class="t">{{ s.name }}</div><div class="s">{{ s.duration_min }} мин</div></div>
+        <div class="t">{{ s.price|floatformat:0 }} ₽</div>
+      </a>
+    {% endfor %}
+  {% empty %}
+    <div class="bk-item"><div class="s">Пока нет услуг для записи.</div></div>
+  {% endfor %}
+{% endblock %}

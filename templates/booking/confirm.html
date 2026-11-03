@@ -1,0 +1,26 @@
+{% extends "booking/base.html" %}
+{% block step %}Подтверждение{% endblock %}
+{% block content %}
+  <a class="bk-back" href="{% url 'book_slots' slug service.id %}">← Выбрать другое время</a>
+
+  <div class="bk-item" style="flex-direction:column; align-items:flex-start; gap:4px;">
+    <div class="t">{{ service.name }}</div>
+    <div class="s">{{ emp.full_name }} · {{ start|slice:'11:16' }} · {{ start|slice:'0:10' }} · {{ service.price|floatformat:0 }} ₽</div>
+  </div>
+
+  {% if error %}<div class="toast error" style="margin:10px 0;">{{ error }}</div>{% endif %}
+
+  <form method="post" action="{% url 'book_confirm' slug %}" style="margin-top:8px;">
+    {% csrf_token %}
+    <input type="hidden" name="service" value="{{ service.id }}">
+    <input type="hidden" name="emp" value="{{ emp.id }}">
+    <input type="hidden" name="start" value="{{ start }}">
+    <div class="field"><label>Ваше имя</label><input name="name" value="{{ name|default:'' }}" required></div>
+    <div class="field"><label>Телефон</label><input name="phone" value="{{ phone|default:'' }}" required placeholder="+7…"></div>
+    <label style="display:flex; gap:9px; align-items:flex-start; font-size:13px; color:var(--text-soft); margin:6px 0 16px;">
+      <input type="checkbox" name="consent" value="1" style="width:auto; margin-top:2px;" required>
+      Согласен на обработку персональных данных
+    </label>
+    <button class="btn primary" type="submit" style="width:100%; justify-content:center; padding:12px;">Записаться</button>
+  </form>
+{% endblock %}

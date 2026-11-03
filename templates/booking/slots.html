@@ -1,0 +1,30 @@
+{% extends "booking/base.html" %}
+{% block step %}{{ service.name }} · {{ service.price|floatformat:0 }} ₽{% endblock %}
+{% block content %}
+  <a class="bk-back" href="{% url 'book_services' slug %}">← К услугам</a>
+
+  <div class="bk-masters">
+    <a class="bk-master {% if emp_id == 'any' %}on{% endif %}" href="?emp=any&date={{ day|date:'Y-m-d' }}">Любой мастер</a>
+    {% for m in masters %}
+      <a class="bk-master {% if emp_id == m.id|stringformat:'s' %}on{% endif %}" href="?emp={{ m.id }}&date={{ day|date:'Y-m-d' }}">{{ m.full_name }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="bk-days">
+    {% for d in days %}
+      <a class="bk-day {% if d == day %}on{% endif %}" href="?emp={{ emp_id }}&date={{ d|date:'Y-m-d' }}">
+        <div>{{ d|date:'D' }}</div><div style="font-weight:600;">{{ d|date:'j' }}</div><div style="font-size:11px;">{{ d|date:'M' }}</div>
+      </a>
+    {% endfor %}
+  </div>
+
+  {% if slots %}
+    <div class="bk-slots">
+      {% for sl in slots %}
+        <a class="bk-slot" href="{% url 'book_form' slug service.id %}?emp={{ sl.emp.id }}&start={{ sl.time|date:'Y-m-d\TH:i' }}">{{ sl.time|date:'H:i' }}</a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="bk-item"><div class="s">На этот день свободных окон нет. Выберите другой день или мастера.</div></div>
+  {% endif %}
+{% endblock %}

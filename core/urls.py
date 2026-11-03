@@ -15,6 +15,8 @@ urlpatterns = [
     path("", views.home, name="home"),
     # Дашборд (журнал живёт в приложении appointments)
     path("dashboard/", views.dashboard, name="dashboard"),
+    # Аналитика по записям (+ выгрузка в Excel через ?export=xlsx)
+    path("analytics/", views.analytics, name="analytics"),
     # Сквозной поиск (клиенты/сотрудники/услуги)
     path("search/", views.global_search, name="global_search"),
     # Раздел «Настройки» собственника
