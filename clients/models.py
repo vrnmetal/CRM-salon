@@ -10,6 +10,9 @@ class Client(TenantModel):
     phone = models.CharField("Телефон", max_length=32, db_index=True)
     email = models.EmailField("Email", blank=True)
     note = models.CharField("Заметка", max_length=300, blank=True)
+    # Telegram chat_id — заполняется, когда клиент подписался на бота салона
+    # (через /start + «поделиться контактом»). Нужен для напоминаний в Telegram.
+    telegram_chat_id = models.CharField("Telegram chat_id", max_length=40, blank=True, default="")
     created_at = models.DateTimeField("Создан", auto_now_add=True)
 
     class Meta:

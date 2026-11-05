@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Напоминания · {{ brand.name }}{% endblock %}
+
+{% block content %}
+<style>
+  .nt-table { width:100%; border-collapse:collapse; }
+  .nt-table th { text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.03em;
+                 color:var(--text-muted); font-weight:600; padding:0 10px 8px; }
+  .nt-table td { padding:10px; border-top:1px solid var(--border); vertical-align:middle; }
+  .nt-table tr:first-child td { border-top:none; }
+  .nt-when { font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .nt-badge { font-size:12px; padding:2px 9px; border-radius:20px; }
+  .nt-sent { background:rgba(28,140,74,.12); color:#1C8C4A; }
+  .nt-failed { background:rgba(200,60,60,.12); color:#C83C3C; }
+  .nt-auto { font-size:11px; color:var(--text-muted); }
+  .nt-empty { color:var(--text-muted); padding:22px 2px; }
+  .nf-field { margin-bottom:14px; }
+  .nf-field label { display:block; font-size:13px; color:var(--text-muted); margin-bottom:5px; }
+  .nf-field input, .nf-field select, .nf-field textarea {
+    width:100%; max-width:420px; padding:9px 11px; border:1px solid var(--border-strong);
+    border-radius:var(--radius-sm); font:inherit; color:var(--text); background:var(--surface); }
+  .nf-field textarea { min-height:80px; max-width:640px; resize:vertical; }
+  .nf-check { display:flex; align-items:center; gap:10px; }
+</style>
+
+<div class="page-head">
+  <div>
+    <div class="sub">Напоминания о визите</div>
+    <h1 class="display" style="margin:2px 0 0;">Обзор</h1>
+  </div>
+</div>
+
+{% include "notifications/_notify_tabs.html" with active="overview" %}
+
+<div class="card" style="margin-bottom:16px;">
+  <h3 style="margin-top:0;">Ждут напоминания{% if due %} · {{ due|length }}{% endif %}</h3>
+  {% if due %}
+    <table class="nt-table">
+      <tr><th>Визит</th><th>Клиент</th><th>Телефон</th><th>Мастер · услуга</th><th></th></tr>
+      {% for a in due %}
+      <tr>
+        <td class="nt-when">{{ a.start|date:"d.m, H:i" }}</td>
+        <td>{{ a.client.full_name|default:"—" }}</td>
+        <td>{{ a.client.phone|default:"—" }}</td>
+        <td>{{ a.employee.full_name }}{% if a.service %} · {{ a.service.name }}{% endif %}</td>
+        <td style="text-align:right;">
+          {% if can_send %}
+          <form method="post" action="{% url 'notification_send' a.id %}" style="margin:0;">
+            {% csrf_token %}<button class="btn" type="submit">Отправить</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <div class="nt-empty">Сейчас напоминать некому — визиты вне окна или уже напомнены.</div>
+  {% endif %}
+</div>
+
+{% if can_manage %}
+<div class="card" style="margin-bottom:16px;">
+  <h3 style="margin-top:0;">Общие настройки</h3>
+  <form method="post" action="{% url 'notifications_panel' %}">
+    {% csrf_token %}
+    <div class="nf-field">
+      <label class="nf-check">
+        <input type="checkbox" name="auto_enabled" {% if settings.auto_enabled %}checked{% endif %}>
+        Автоматическая отправка (по расписанию)
+      </label>
+    </div>
+    <div class="nf-field">
+      <label>За сколько часов до визита напоминать</label>
+      <input type="number" name="hours_before" min="1" max="720" value="{{ settings.hours_before }}">
+    </div>
+    <div class="nf-field">
+      <label>Активный канал</label>
+      <select name="channel">
+        {% for code, title in channels %}
+          <option value="{{ code }}" {% if settings.channel == code %}selected{% endif %}>{{ title }}</option>
+        {% endfor %}
+      </select>
+      <div class="nt-auto" style="margin-top:4px;">Настройки каждого канала — на его вкладке выше.</div>
+    </div>
+    <div class="nf-field">
+      <label>Шаблон сообщения</label>
+      <textarea name="template">{{ settings.template }}</textarea>
+      <div class="nt-auto" style="margin-top:4px;">Подстановки: {{ "{client}" }}, {{ "{salon}" }}, {{ "{date}" }}, {{ "{time}" }}, {{ "{service}" }}, {{ "{master}" }}</div>
+    </div>
+    <button class="btn" type="submit">Сохранить</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <h3 style="margin-top:0;">Журнал отправок</h3>
+  {% if log %}
+    <table class="nt-table">
+      <tr><th>Когда</th><th>Клиент</th><th>Канал</th><th>Статус</th><th>Кто</th></tr>
+      {% for n in log %}
+      <tr>
+        <td class="nt-when">{{ n.created_at|date:"d.m H:i" }}</td>
+        <td>{{ n.appointment.client.full_name|default:"—" }}</td>
+        <td>{{ n.channel|default:"—" }}</td>
+        <td>
+          {% if n.status == 'sent' %}<span class="nt-badge nt-sent">Отправлено</span>
+          {% elif n.status == 'failed' %}<span class="nt-badge nt-failed" title="{{ n.error }}">Ошибка</span>
+          {% else %}{{ n.get_status_display }}{% endif %}
+        </td>
+        <td class="nt-auto">{% if n.is_auto %}авто{% elif n.created_by %}{{ n.created_by.username }}{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <div class="nt-empty">Отправок пока не было.</div>
+  {% endif %}
+</div>
+{% endblock %}

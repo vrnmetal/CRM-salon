@@ -44,6 +44,12 @@
         <div class="muted" style="font-size:14px;">Онлайн-запись из карточки организации на Яндекс.Картах.</div>
       </a>
     {% endif %}
+    {% if request.user|can:"notification.manage" %}
+      <a class="card" href="{% url 'notification_settings' %}" style="text-decoration:none; color:inherit;">
+        <h3>Уведомления</h3>
+        <div class="muted" style="font-size:14px;">Напоминания о визите: авто-режим, за сколько часов, канал, шаблон.</div>
+      </a>
+    {% endif %}
     {% if request.user|can:"branding.manage" and request.user|can:"payment.charge" %}
       <a class="card" href="{% url 'payment_settings' %}" style="text-decoration:none; color:inherit;">
         <h3>Оплата и эквайринг</h3>

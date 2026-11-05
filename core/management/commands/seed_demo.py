@@ -224,6 +224,13 @@ class Command(BaseCommand):
                 e.save(update_fields=["payroll_scheme"])
         self.stdout.write("  схема ЗП назначена мастерам")
 
+        # Настройки уведомлений (авто выключено, канал-заглушка — для демо/теста)
+        from notifications.models import NotificationSettings
+        NotificationSettings.objects.get_or_create(
+            defaults={"auto_enabled": False, "hours_before": 24,
+                      "channel": NotificationSettings.CH_CONSOLE})
+        self.stdout.write("  настройки уведомлений созданы")
+
         # Записи на сегодня — ТОЛЬКО по флагу --with-appointments.
         # Иначе команду можно безопасно гонять на рабочей базе: она не подкинет
         # «левых» записей в журнал.

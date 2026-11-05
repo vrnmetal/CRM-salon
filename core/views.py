@@ -430,6 +430,61 @@ def yandex_settings(request):
     })
 
 
+# --- Персональный порядок пунктов сайдбара (drag-n-drop) ---
+@login_required
+@require_POST
+def sidebar_order(request):
+    import json
+
+    try:
+        data = json.loads(request.body or b"{}")
+        keys = data.get("order") or []
+        hidden = data.get("hidden") or []
+    except (ValueError, TypeError):
+        return JsonResponse({"ok": False}, status=400)
+    request.user.sidebar_order = [k for k in keys if isinstance(k, str)][:50]
+    request.user.sidebar_hidden = [k for k in hidden if isinstance(k, str)][:50]
+    request.user.save(update_fields=["sidebar_order", "sidebar_hidden"])
+    return JsonResponse({"ok": True})
+
+
+# --- Здоровье данных: дубли клиентов, мусорные данные, минусы склада ---
+@login_required
+@requires("data_health.view")
+def health(request):
+    from core import health as H
+
+    groups = H.duplicate_groups()
+    problems = H.problem_clients()
+    negatives = H.negative_stock(request.tenant)
+    return render(request, "core/health.html", {
+        "groups": groups,
+        "problems": problems,
+        "negatives": negatives,
+        "dup_total": sum(len(g["clients"]) - 1 for g in groups),
+        "can_fix": has_perm(request.user, "data_health.fix"),
+    })
+
+
+@login_required
+@requires("data_health.fix")
+@require_POST
+def health_merge(request):
+    from clients.models import Client
+    from core import health as H
+
+    primary_id = request.POST.get("primary")
+    ids = request.POST.getlist("members")
+    primary = Client.objects.filter(pk=primary_id).first()
+    if primary is None or len(ids) < 2:
+        messages.error(request, "Не удалось определить основного клиента.")
+        return redirect("health")
+    dups = list(Client.objects.filter(pk__in=ids))
+    n = H.merge_clients(primary, dups)
+    messages.success(request, f"Слито дублей: {n}. История перенесена на «{primary.full_name or primary.phone}».")
+    return redirect("health")
+
+
 # --- Настройки доступа: РЕДАКТИРУЕМЫЕ галочки прав по ролям ---
 # UI строится из реестра прав; собственник отмечает, что можно делать каждой роли.
 @login_required

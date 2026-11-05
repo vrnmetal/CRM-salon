@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Напоминания · Telegram · {{ brand.name }}{% endblock %}
+
+{% block content %}
+<style>
+  .nf-field { margin-bottom:14px; }
+  .nf-field label { display:block; font-size:13px; color:var(--text-muted); margin-bottom:5px; }
+  .nf-field input { width:100%; max-width:480px; padding:9px 11px; border:1px solid var(--border-strong);
+    border-radius:var(--radius-sm); font:inherit; color:var(--text); background:var(--surface); }
+  .nf-hint { font-size:13px; color:var(--text-muted); }
+  .nt-table { width:100%; border-collapse:collapse; }
+  .nt-table th { text-align:left; font-size:12px; text-transform:uppercase; color:var(--text-muted); font-weight:600; padding:0 10px 8px; }
+  .nt-table td { padding:9px 10px; border-top:1px solid var(--border); }
+  .nt-empty { color:var(--text-muted); padding:18px 2px; }
+  code { background:var(--surface); padding:1px 6px; border-radius:4px; }
+</style>
+
+<div class="page-head">
+  <div>
+    <div class="sub">Напоминания · канал</div>
+    <h1 class="display" style="margin:2px 0 0;">Telegram</h1>
+  </div>
+</div>
+
+{% include "notifications/_notify_tabs.html" with active="telegram" %}
+
+<div class="card" style="margin-bottom:16px;">
+  <h3 style="margin-top:0;">Бот</h3>
+  {% if bot and bot.username %}
+    <div class="nf-hint">Бот: <b>@{{ bot.username }}</b> · <a href="{{ bot_link }}" target="_blank">{{ bot_link }}</a></div>
+  {% elif bot and bot.error %}
+    <div class="nf-hint" style="color:#C83C3C;">Бот недоступен: {{ bot.error }}. Проверьте токен.</div>
+  {% else %}
+    <div class="nf-hint">Укажите токен и сохраните — появятся статус и ссылка.</div>
+  {% endif %}
+
+  {% if can_manage %}
+  <form method="post" style="margin-top:14px;">
+    {% csrf_token %}
+    <div class="nf-field">
+      <label>Токен бота (от @BotFather)</label>
+      <input type="text" name="telegram_bot_token" value="{{ settings.telegram_bot_token }}" placeholder="123456:ABC-...">
+    </div>
+    <button class="btn" type="submit">Сохранить токен</button>
+  </form>
+  {% endif %}
+
+  <div class="nf-hint" style="margin-top:16px;">
+    <b>Как подключаются клиенты:</b> открывают бота → «Старт» → делятся номером. Мы находим карточку
+    по телефону и дальше шлём напоминания. Бот может писать только подписавшимся — ограничение Telegram.
+  </div>
+  <div class="nf-hint" style="margin-top:8px;">
+    <b>Связывание chat_id:</b> вебхук (нужен HTTPS-домен) <code>{{ webhook_url }}</code> — команда
+    <code>telegram_set_webhook</code>; либо без домена — опрос <code>telegram_poll</code> по cron.
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Журнал Telegram</h3>
+  {% if log %}
+    <table class="nt-table">
+      <tr><th>Когда</th><th>Клиент</th><th>Статус</th></tr>
+      {% for n in log %}
+      <tr>
+        <td>{{ n.created_at|date:"d.m H:i" }}</td>
+        <td>{{ n.appointment.client.full_name|default:"—" }}</td>
+        <td>{% if n.status == 'sent' %}Отправлено{% elif n.status == 'failed' %}<span title="{{ n.error }}">Ошибка</span>{% else %}{{ n.get_status_display }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <div class="nt-empty">Отправок через Telegram пока не было.</div>
+  {% endif %}
+</div>
+{% endblock %}

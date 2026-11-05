@@ -132,6 +132,10 @@ class User(AbstractUser):
     backup_codes = models.JSONField("Резервные коды (хэши)", default=list, blank=True)
     # Тумблер подсказок на уровне пользователя (новичок — вкл, профи — выкл).
     show_hints = models.BooleanField("Показывать подсказки", default=True)
+    # Персональный порядок пунктов сайдбара (список ключей). Пусто = порядок по умолчанию.
+    sidebar_order = models.JSONField("Порядок меню", default=list, blank=True)
+    # Персонально скрытые пункты сайдбара (список ключей). Модуль не отключается — только прячется из меню.
+    sidebar_hidden = models.JSONField("Скрытые пункты меню", default=list, blank=True)
 
     class Meta:
         verbose_name = "Пользователь"

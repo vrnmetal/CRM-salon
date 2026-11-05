@@ -6,7 +6,7 @@
   <title>{% block title %}{{ brand.name|default:"Салон" }}{% endblock %}</title>
 
   {# Единый дизайн-файл. ?v — поднимать при каждой правке app.css (кэш). #}
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=35">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=36">
   {# Календарь/часы — свои окна вместо системных (flatpickr, локально) #}
   <link rel="stylesheet" href="{% static 'vendor/flatpickr/flatpickr.min.css' %}">
   <link rel="stylesheet" href="{% static 'css/flatpickr-theme.css' %}?v=1">
@@ -43,8 +43,9 @@
       {% endif %}
     </a>
 
-    <nav class="nav">
-      {% if request.user.is_provider_admin and not request.impersonator %}
+    {# Провайдерские пункты — отдельно, не сортируются #}
+    {% if request.user.is_provider_admin and not request.impersonator %}
+      <nav class="nav">
         <a href="{% url 'provider_home' %}" class="{% if request.resolver_match.url_name == 'provider_home' or request.resolver_match.url_name == 'provider_tenant' or request.resolver_match.url_name == 'provider_tenant_create' %}active{% endif %}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 13h2M8 16h6"/></svg>
           Тенанты</a>
@@ -54,57 +55,76 @@
         <a href="{% url 'security_2fa' %}" class="{% if request.resolver_match.url_name == 'security_2fa' %}active{% endif %}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
           Безопасность</a>
-      {% endif %}
-      {% if request.user|can:"dashboard.view" %}
-        <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'dash_records' or request.resolver_match.url_name == 'dash_finance' %}active{% endif %}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
-          Дашборд</a>
-      {% endif %}
-      {% if request.user|can:"appointment.view" %}
-        <a href="{% url 'journal' %}" class="{% if request.resolver_match.url_name == 'journal' %}active{% endif %}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2.5v3M16 2.5v3"/></svg>
-          Журнал</a>
-      {% endif %}
-      {% if request.user|can:"client.view" %}
-        <a href="{% url 'client_list' %}" class="{% if request.resolver_match.url_name == 'client_list' or request.resolver_match.url_name == 'client_detail' %}active{% endif %}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0M16 5.5a3 3 0 0 1 0 5.5M17.5 20a5 5 0 0 0-3-4.6"/></svg>
-          Клиенты</a>
-      {% endif %}
-      {% if request.user|can:"staff.view" %}
-        <a href="{% url 'staff_list' %}" class="{% if request.resolver_match.url_name == 'staff_list' %}active{% endif %}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><circle cx="12" cy="8" r="3.4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
-          Сотрудники</a>
-      {% endif %}
-      {% if request.user|can:"service.view" %}
-        <a href="{% url 'service_list' %}" class="{% if request.resolver_match.url_name == 'service_list' %}active{% endif %}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
-          Услуги</a>
-      {% endif %}
-      {% if request.user|can:"finance.view" %}
-        <a href="{% url 'finance_home' %}" class="{% if request.resolver_match.url_name == 'finance_home' %}active{% endif %}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><path d="M3 7h18v12H3zM3 11h18M7 15h4"/></svg>
-          Финансы</a>
-      {% endif %}
-      {% if request.user|can:"payroll.view" %}
-        <a href="{% url 'payroll_home' %}" class="{% if 'payroll' in request.resolver_match.url_name %}active{% endif %}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5a2.5 2 0 0 1 5 0c0 2-5 1-5 3a2.5 2 0 0 0 5 0"/></svg>
-          Зарплаты</a>
-      {% endif %}
-      {% if request.user|can:"stock.view" %}
-        <a href="{% url 'stock_home' %}" class="{% if request.resolver_match.url_name == 'stock_home' or request.resolver_match.url_name == 'techcards' or request.resolver_match.url_name == 'service_card' %}active{% endif %}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><path d="M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7M12 11v10"/></svg>
-          Склад</a>
-      {% endif %}
-      {% if request.user|can:"subscription.view" %}
-        <a href="{% url 'subs_plans' %}" class="{% if request.resolver_match.url_name == 'subs_plans' or request.resolver_match.url_name == 'subs_sell' %}active{% endif %}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20M6 14h4"/></svg>
-          Абонементы</a>
-      {% endif %}
+      </nav>
+    {% endif %}
+
+    <style>
+      .nav-badge { background:var(--accent); color:var(--accent-contrast); font-size:11px; font-weight:600; min-width:18px; height:18px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; padding:0 5px; }
+      .menu-gear { display:inline-flex; align-items:center; gap:6px; margin:6px 0 0 12px; padding:4px 6px; background:none; border:none; cursor:pointer; color:var(--text-muted); opacity:.4; font:inherit; font-size:12px; }
+      .menu-gear:hover { opacity:1; }
+      .menu-overlay { position:fixed; inset:0; background:rgba(0,0,0,.28); display:none; align-items:center; justify-content:center; z-index:80; }
+      .menu-overlay.open { display:flex; }
+      .menu-box { background:var(--surface); border:1px solid var(--border); border-radius:14px; width:340px; max-width:92vw; max-height:80vh; overflow:auto; padding:18px; box-shadow:0 24px 70px rgba(0,0,0,.22); }
+      .menu-box h3 { margin:0 0 2px; }
+      .menu-box .sub2 { color:var(--text-muted); font-size:13px; margin-bottom:12px; }
+      .menu-row { display:flex; align-items:center; gap:10px; padding:9px 8px; border-radius:9px; }
+      .menu-row:hover { background:var(--bg); }
+      .menu-row.hidden-item .menu-label { opacity:.4; }
+      .menu-grip { cursor:grab; color:var(--text-muted); user-select:none; font-size:13px; letter-spacing:-2px; }
+      .menu-label { flex:1; min-width:0; }
+      .menu-eye { background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:13px; padding:2px 6px; border-radius:6px; }
+      .menu-eye:hover { background:var(--bg); color:var(--text); }
+      .menu-row.dragging { opacity:.4; }
+      .menu-row.drop-over { box-shadow:inset 0 2px 0 var(--accent); }
+      .menu-done { margin-top:14px; }
+    </style>
+
+    {# Основное меню — чистое, без значков. Настройка (порядок + скрытие) — за шестерёнкой. #}
+    <nav class="nav" id="mainnav">
+      {% for it in sidebar_items %}
+        <a href="{{ it.url }}" class="{% if it.active %}active{% endif %}"
+           style="display:flex; align-items:center; justify-content:space-between;">
+          <span style="display:inline-flex; align-items:center; gap:10px; min-width:0;">
+            {{ it.icon }}<span>{{ it.label }}</span>
+          </span>
+          {% if it.badge %}<span class="nav-badge">{{ it.badge }}</span>{% endif %}
+        </a>
+      {% endfor %}
     </nav>
+    {% if sidebar_menu %}
+      <button type="button" class="menu-gear" id="menu-gear" title="Настроить меню">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="15" height="15"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.5M12 19v2.5M4.2 7l2.1 1.2M17.7 15.8l2.1 1.2M4.2 17l2.1-1.2M17.7 8.2l2.1-1.2"/></svg>
+        Настроить меню
+      </button>
+
+      <div class="menu-overlay" id="menu-overlay">
+        <div class="menu-box" role="dialog" aria-modal="true">
+          <h3>Меню</h3>
+          <div class="sub2">Перетащите за ⠿, спрячьте ненужное. Настройка только для вас — модули не отключаются.</div>
+          <div id="menu-list" data-url="{% url 'sidebar_order' %}">
+            {% for it in sidebar_menu %}
+              <div class="menu-row {% if it.hidden %}hidden-item{% endif %}" data-key="{{ it.key }}" data-hidden="{% if it.hidden %}1{% else %}0{% endif %}">
+                <span class="menu-grip" draggable="true" aria-label="Переместить">⠿</span>
+                <span class="menu-label">{{ it.label }}</span>
+                <button type="button" class="menu-eye">{% if it.hidden %}Показать{% else %}Скрыть{% endif %}</button>
+              </div>
+            {% endfor %}
+          </div>
+          <button type="button" class="btn menu-done" id="menu-done">Готово</button>
+        </div>
+      </div>
+    {% endif %}
 
     <div class="spacer"></div>
 
-    {# История действий — внизу, сразу над настройками #}
+    {# Здоровье данных + История — внизу, над настройками #}
+    {% if request.user|can:"data_health.view" %}
+      <nav class="nav">
+        <a href="{% url 'health' %}" class="{% if request.resolver_match.url_name == 'health' %}active{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="18" height="18"><path d="M3 12h4l2 5 4-12 2 7h6"/></svg>
+          Здоровье данных</a>
+      </nav>
+    {% endif %}
     {% if request.user|can:"history.view" %}
       <nav class="nav">
         <a href="{% url 'history' %}" class="{% if request.resolver_match.url_name == 'history' %}active{% endif %}">
@@ -186,5 +206,60 @@ document.addEventListener('touchstart', function (e) {
 </script>
 <script src="{% static 'js/wheeltime.js' %}?v=5"></script>
 <script src="{% static 'js/phone.js' %}?v=1"></script>
+<script>
+// Настройка меню: панель за шестерёнкой — порядок (drag за ⠿) + показ/скрытие пунктов.
+(function () {
+  var gear = document.getElementById('menu-gear');
+  var overlay = document.getElementById('menu-overlay');
+  var list = document.getElementById('menu-list');
+  if (!gear || !overlay || !list) return;
+  var url = list.dataset.url, dragEl = null;
+
+  function cookie(n){var m=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return m?m.pop():'';}
+  function clearOver(){list.querySelectorAll('.drop-over').forEach(function(x){x.classList.remove('drop-over');});}
+  function save(reload){
+    var rows = list.querySelectorAll('.menu-row');
+    var order = [].map.call(rows, function(r){return r.dataset.key;});
+    var hidden = [].filter.call(rows, function(r){return r.dataset.hidden === '1';}).map(function(r){return r.dataset.key;});
+    fetch(url, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':cookie('csrftoken')},
+      body: JSON.stringify({order: order, hidden: hidden})})
+      .then(function(){ if (reload) location.reload(); })
+      .catch(function(){ if (reload) location.reload(); });
+  }
+
+  gear.addEventListener('click', function(){ overlay.classList.add('open'); });
+  overlay.addEventListener('click', function(e){ if (e.target === overlay) save(true); });
+  document.getElementById('menu-done').addEventListener('click', function(){ save(true); });
+
+  // показать/скрыть пункт
+  list.addEventListener('click', function(e){
+    var b = e.target.closest('.menu-eye'); if (!b) return;
+    var row = b.closest('.menu-row'); var hid = row.dataset.hidden === '1';
+    row.dataset.hidden = hid ? '0' : '1';
+    row.classList.toggle('hidden-item', !hid);
+    b.textContent = hid ? 'Скрыть' : 'Показать';
+  });
+
+  // перетаскивание строк панели за ручку
+  list.addEventListener('dragstart', function(e){
+    var g = e.target.closest('.menu-grip'); if (!g) { e.preventDefault(); return; }
+    dragEl = g.closest('.menu-row'); dragEl.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', '');
+  });
+  list.addEventListener('dragend', function(){ if(dragEl)dragEl.classList.remove('dragging'); dragEl=null; clearOver(); });
+  list.addEventListener('dragover', function(e){
+    if (!dragEl) return; e.preventDefault();
+    var r = e.target.closest('.menu-row'); if (!r || r === dragEl) return;
+    r.__before = (e.clientY - r.getBoundingClientRect().top) < r.offsetHeight/2;
+    clearOver(); r.classList.add('drop-over');
+  });
+  list.addEventListener('drop', function(e){
+    if (!dragEl) return; e.preventDefault();
+    var r = e.target.closest('.menu-row');
+    if (r && r !== dragEl) { list.insertBefore(dragEl, r.__before ? r : r.nextSibling); }
+    clearOver();
+  });
+})();
+</script>
 </body>
 </html>

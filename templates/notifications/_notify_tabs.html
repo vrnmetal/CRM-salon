@@ -1,0 +1,13 @@
+{% load core_extras %}
+<style>
+  .nt-tabs { display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:22px; }
+  .nt-tabs a { padding:10px 16px; text-decoration:none; color:var(--text-muted); font-size:15px;
+               font-weight:540; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .nt-tabs a:hover { color:var(--text); }
+  .nt-tabs a.on { color:var(--text); border-bottom-color:var(--accent); }
+</style>
+<div class="nt-tabs">
+  <a href="{% url 'notifications_panel' %}" class="{% if active == 'overview' %}on{% endif %}">Обзор</a>
+  <a href="{% url 'notification_telegram' %}" class="{% if active == 'telegram' %}on{% endif %}">Telegram</a>
+  <a href="{% url 'notification_sms' %}" class="{% if active == 'sms' %}on{% endif %}">SMS</a>
+</div>

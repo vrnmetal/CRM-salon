@@ -7,11 +7,11 @@
 
 :root {
   /* --- Холодная нейтральная база (Apple) --- */
-  --bg: #FBFBFD;            /* фон страницы */
-  --surface: #FFFFFF;       /* белые панели */
-  --surface-2: #F5F5F7;     /* фирменный светло-серый (плитки/второстепенное) */
-  --border: #E8E8ED;        /* тонкая граница */
-  --border-strong: #D2D2D7; /* акцентированная граница */
+  --bg: #EFF1F4;            /* фон страницы — холодный серый, чтобы белые панели «всплывали» */
+  --surface: #FFFFFF;       /* белые панели (приподнятый слой) */
+  --surface-2: #E7E9EE;     /* утопленный слой (чипы/второстепенное, инпуты) */
+  --border: #E3E5EA;        /* тонкая граница */
+  --border-strong: #CED1D7; /* акцентированная граница */
   --text: #1D1D1F;          /* почти-чёрный холодный */
   --text-muted: #6E6E73;    /* второстепенный текст */
   --text-soft: #86868B;     /* подписи */
@@ -33,7 +33,9 @@
   --radius-sm: 12px;
   --gap: 16px;
   --sidebar-w: 240px;
-  --shadow: 0 1px 1px rgba(0,0,0,.03);
+  --shadow-sm: 0 1px 2px rgba(17,24,39,.06);
+  --shadow: 0 1px 2px rgba(17,24,39,.05), 0 4px 14px rgba(17,24,39,.06);
+  --shadow-lg: 0 12px 34px rgba(17,24,39,.10);
 
   /* Один семейство — системный SF-стек. Без серифа (он был «теллом»). */
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
@@ -169,14 +171,18 @@ h3 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 .4e
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px 22px;
+  box-shadow: var(--shadow);
 }
 .grid { display: grid; gap: var(--gap); }
 .grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .grid.auto { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 
-/* --- Метрика-плитка (на сером, крупное число) --- */
-.tile { background: var(--surface-2); border-radius: var(--radius); padding: 18px 20px; }
+/* --- Метрика-плитка: белая приподнятая карточка на сером фоне (число «всплывает») --- */
+.tile { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+        border-radius: var(--radius); padding: 18px 20px; transition: box-shadow .15s, transform .15s; }
+a.tile { display: block; text-decoration: none; color: inherit; }
+a.tile:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
 .tile .label { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
 .tile .value { font-size: 30px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; }
 .tile .delta { font-size: 13px; margin-top: 8px; }

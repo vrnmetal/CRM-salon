@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% load core_extras %}
+{% block title %}Здоровье данных · {{ brand.name }}{% endblock %}
+
+{% block content %}
+<style>
+  .hl-table { width:100%; border-collapse:collapse; }
+  .hl-table th { text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.03em;
+                 color:var(--text-muted); font-weight:600; padding:0 10px 8px; }
+  .hl-table td { padding:9px 10px; border-top:1px solid var(--border); vertical-align:middle; }
+  .hl-table tr:first-child td { border-top:none; }
+  .hl-group { border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; margin-bottom:12px; }
+  .hl-member { display:flex; align-items:center; gap:10px; padding:7px 0; }
+  .hl-member label { display:flex; align-items:center; gap:10px; cursor:pointer; flex:1; }
+  .hl-tag { font-size:12px; color:#C83C3C; background:rgba(200,60,60,.1); padding:2px 8px; border-radius:20px; }
+  .hl-muted { color:var(--text-muted); font-size:13px; }
+  .hl-empty { color:var(--text-muted); padding:20px 2px; }
+</style>
+
+<div class="page-head">
+  <div>
+    <div class="sub">Чистота базы</div>
+    <h1 class="display" style="margin:2px 0 0;">Здоровье данных</h1>
+  </div>
+</div>
+
+<div class="grid auto" style="margin-bottom:18px;">
+  <div class="tile">
+    <div class="label">Дубли клиентов</div>
+    <div class="value">{{ dup_total }}</div>
+    <div class="delta {% if dup_total %}down{% else %}up{% endif %}">в {{ groups|length }} групп{{ groups|length|plural_ru:"е,ах,ах" }}</div>
+  </div>
+  <div class="tile">
+    <div class="label">Проблемные записи клиентов</div>
+    <div class="value">{{ problems|length }}</div>
+    <div class="delta flat">кривой телефон / нет имени</div>
+  </div>
+  <div class="tile">
+    <div class="label">Отрицательные остатки</div>
+    <div class="value">{{ negatives|length }}</div>
+    <div class="delta {% if negatives %}down{% else %}up{% endif %}">склад в минусе</div>
+  </div>
+</div>
+
+{# --- Дубли клиентов --- #}
+<div class="card" style="margin-bottom:16px;">
+  <h3 style="margin-top:0;">Дубли клиентов {% hint "health.duplicates" %}</h3>
+  {% if groups %}
+    <div class="hl-muted" style="margin-bottom:12px;">
+      Один человек заведён под разными форматами номера. Выберите основную карточку —
+      история (визиты, абонементы) с остальных перенесётся на неё, дубли удалятся.
+    </div>
+    {% for g in groups %}
+      <form method="post" action="{% url 'health_merge' %}" class="hl-group">
+        {% csrf_token %}
+        <div class="hl-muted" style="margin-bottom:6px;">Телефон: +7{{ g.phone }}</div>
+        {% for c in g.clients %}
+          <div class="hl-member">
+            <label>
+              <input type="radio" name="primary" value="{{ c.id }}" {% if forloop.first %}checked{% endif %}>
+              <span><b>{{ c.full_name|default:"— без имени —" }}</b> · {{ c.phone }}</span>
+              <span class="hl-muted">{{ c.n_appts }} визит{{ c.n_appts|plural_ru:",а,ов" }}{% if forloop.first %} · предлагаем основным{% endif %}</span>
+            </label>
+            <input type="hidden" name="members" value="{{ c.id }}">
+          </div>
+        {% endfor %}
+        {% if can_fix %}
+          <button class="btn" type="submit" style="margin-top:8px;">Слить в выбранную</button>
+        {% endif %}
+      </form>
+    {% endfor %}
+  {% else %}
+    <div class="hl-empty">Дублей не найдено. База чистая.</div>
+  {% endif %}
+</div>
+
+{# --- Проблемные клиенты --- #}
+<div class="card" style="margin-bottom:16px;">
+  <h3 style="margin-top:0;">Проблемные карточки клиентов</h3>
+  {% if problems %}
+    <table class="hl-table">
+      <tr><th>Клиент</th><th>Телефон</th><th>Проблема</th><th>Визитов</th><th></th></tr>
+      {% for p in problems %}
+      <tr>
+        <td>{{ p.client.full_name|default:"— без имени —" }}</td>
+        <td>{{ p.client.phone|default:"—" }}</td>
+        <td>{% for i in p.issues %}<span class="hl-tag">{{ i }}</span> {% endfor %}</td>
+        <td>{{ p.client.n_appts }}</td>
+        <td style="text-align:right;"><a class="btn ghost" href="{% url 'client_detail' p.client.id %}">Открыть</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <div class="hl-empty">Проблемных карточек нет.</div>
+  {% endif %}
+</div>
+
+{# --- Отрицательные остатки --- #}
+{% if negatives %}
+<div class="card">
+  <h3 style="margin-top:0;">Отрицательные остатки склада</h3>
+  <div class="hl-muted" style="margin-bottom:12px;">Списали больше, чем было. Проверьте приходы и тех. карты, выровняйте остаток.</div>
+  <table class="hl-table">
+    <tr><th>Материал</th><th>Остаток</th><th></th></tr>
+    {% for m in negatives %}
+    <tr>
+      <td>{{ m.name }}</td>
+      <td style="color:#C83C3C;">{{ m.quantity }} {{ m.unit }}</td>
+      <td style="text-align:right;"><a class="btn ghost" href="{% url 'stock_home' %}">К складу</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+{% endblock %}

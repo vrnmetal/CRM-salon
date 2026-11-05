@@ -29,9 +29,14 @@ urlpatterns = [
     path("settings/branding/", views.branding_settings, name="branding_settings"),
     # Интеграция с Яндекс.Картами (данные точки + вкл/выкл)
     path("settings/yandex/", views.yandex_settings, name="yandex_settings"),
+    # Здоровье данных (дубли клиентов, мусор, минусы склада)
+    path("health/", views.health, name="health"),
+    path("health/merge/", views.health_merge, name="health_merge"),
     # История действий (с отменой)
     path("history/", views.history, name="history"),
     path("history/<int:pk>/undo/", views.history_undo, name="history_undo"),
     # Тумблер подсказок
     path("profile/hints/toggle/", views.toggle_hints, name="toggle_hints"),
+    # Персональный порядок пунктов сайдбара
+    path("profile/sidebar-order/", views.sidebar_order, name="sidebar_order"),
 ]

@@ -76,6 +76,11 @@ register("stock.view", "Видеть склад", "stock", "Склад")
 register("stock.manage", "Управлять складом (материалы, приход/списание)", "stock", "Склад")
 register("techcard.edit", "Редактировать тех. карты услуг", "stock", "Склад")
 
+# --- Уведомления и напоминания (ядро) ---
+register("notification.view", "Видеть напоминания и журнал отправок", "notifications", "Уведомления")
+register("notification.send", "Отправлять напоминания вручную", "notifications", "Уведомления")
+register("notification.manage", "Настраивать уведомления (авто-режим, шаблон, канал)", "notifications", "Уведомления")
+
 # --- Дашборд ---
 register("dashboard.view", "Видеть дашборд собственника", "dashboard", "Аналитика")
 register("analytics.view", "Видеть аналитику по записям (и выгрузку)", "dashboard", "Аналитика")
@@ -189,6 +194,9 @@ def role_presets() -> dict[str, dict]:
         "staff.view",
         "dashboard.view",
         "analytics.view",
+        # Администратор на ресепшене видит и шлёт напоминания
+        "notification.view",
+        "notification.send",
         # Администратор на ресепшене принимает оплату и работает с абонементами
         "payment.view",
         "payment.charge",

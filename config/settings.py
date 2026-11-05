@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     "payroll",
     "booking",
     "yandex_booking",
+    "notifications",
 ]
 
 
@@ -109,6 +110,7 @@ TEMPLATES = [
                 # Наши процессоры: брендинг тенанта, подсказки, меню модулей
                 "core.context_processors.branding",
                 "core.context_processors.ui_flags",
+                "core.context_processors.sidebar_nav",
             ],
         },
     },
